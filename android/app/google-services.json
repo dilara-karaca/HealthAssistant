@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "970623891525",
+    "project_id": "healthassistant-2e690",
+    "storage_bucket": "healthassistant-2e690.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:970623891525:android:c86806cd9d56e85a554b2c",
+        "android_client_info": {
+          "package_name": "com.example.kronik_hasta_takip"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBD-j1O1ku8HXoQ8r9YKAaZH_6Pg51MuLo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
