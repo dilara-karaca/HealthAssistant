@@ -20,6 +20,9 @@ class _HomePageState extends State<HomePage> {
     fetchUserData();
   }
 
+  double _botTop = 600;
+  double _botLeft = 20;
+
   Future<void> fetchUserData() async {
     final uid = FirebaseAuth.instance.currentUser!.uid;
     final doc =
@@ -38,153 +41,177 @@ class _HomePageState extends State<HomePage> {
       body:
           userData == null
               ? const Center(child: CircularProgressIndicator())
-              : Container(
-                decoration: const BoxDecoration(
-                  image: DecorationImage(
-                    image: AssetImage("images/arka_plan.png"),
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                child: SafeArea(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
+              : Stack(
+                children: [
+                  Container(
+                    decoration: const BoxDecoration(
+                      image: DecorationImage(
+                        image: AssetImage("images/arka_plan.png"),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    child: SafeArea(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
-                                  const CircleAvatar(
-                                    radius: 24,
-                                    backgroundImage: AssetImage(
-                                      'images/person.png',
-                                    ),
+                                  Row(
+                                    children: [
+                                      const CircleAvatar(
+                                        radius: 24,
+                                        backgroundImage: AssetImage(
+                                          'images/person.png',
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Text(
+                                        userData?['name'] ?? '...',
+                                        style: const TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(width: 10),
-                                  Text(
-                                    userData?['name'] ?? '...',
-                                    style: const TextStyle(
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.w600,
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(12),
+                                      boxShadow: const [
+                                        BoxShadow(
+                                          color: Colors.black12,
+                                          blurRadius: 4,
+                                          offset: Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Text(
+                                          showPatientCode
+                                              ? (userData?['patientCode'] ??
+                                                  'Kod yok')
+                                              : "Hasta Kodu",
+                                          style: const TextStyle(
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        GestureDetector(
+                                          onTap:
+                                              () => setState(
+                                                () =>
+                                                    showPatientCode =
+                                                        !showPatientCode,
+                                              ),
+                                          child: Icon(
+                                            showPatientCode
+                                                ? Icons.visibility
+                                                : Icons.visibility_off,
+                                            size: 20,
+                                            color: Colors.grey[700],
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],
                               ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(12),
-                                  boxShadow: const [
-                                    BoxShadow(
-                                      color: Colors.black12,
-                                      blurRadius: 4,
-                                      offset: Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: Row(
-                                  children: [
-                                    Text(
-                                      showPatientCode
-                                          ? (userData?['patientCode'] ??
-                                              'Kod yok')
-                                          : "Hasta Kodu",
-                                      style: const TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    GestureDetector(
-                                      onTap:
-                                          () => setState(
-                                            () =>
-                                                showPatientCode =
-                                                    !showPatientCode,
-                                          ),
-                                      child: Icon(
-                                        showPatientCode
-                                            ? Icons.visibility
-                                            : Icons.visibility_off,
-                                        size: 20,
-                                        color: Colors.grey[700],
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                            ),
+                            const SizedBox(height: 10),
+                            SizedBox(
+                              height: 230,
+                              child: PageView(
+                                children: [
+                                  _buildHeartCard(),
+                                  _buildHeartGraphCard(),
+                                ],
                               ),
-                            ],
-                          ),
+                            ),
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              height: 230,
+                              child: PageView(
+                                children: [
+                                  _buildPressureCard(),
+                                  _buildPressureGraphCard(),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
+                              child: Column(
+                                children: [
+                                  _buildBottomCard(
+                                    "Adım Sayısı",
+                                    "images/ayak.png",
+                                    "1200 Adım",
+                                  ),
+                                  _buildBottomCard(
+                                    "Kan Oksijen Seviyesi",
+                                    "images/kan.png",
+                                    "96%",
+                                  ),
+                                  _buildBottomCard(
+                                    "Stres Seviyesi",
+                                    "images/stressed.png",
+                                    "Düşük",
+                                  ),
+                                  _buildBottomCard(
+                                    "Vücut Isısı",
+                                    "images/sicaklik.png",
+                                    "37°C",
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 30),
+                          ],
                         ),
-
-                        const SizedBox(height: 10),
-
-                        SizedBox(
-                          height: 230,
-                          child: PageView(
-                            children: [
-                              _buildHeartCard(),
-                              _buildHeartGraphCard(),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        SizedBox(
-                          height: 230,
-                          child: PageView(
-                            children: [
-                              _buildPressureCard(),
-                              _buildPressureGraphCard(),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: Column(
-                            children: [
-                              _buildBottomCard(
-                                "Adım Sayısı",
-                                "images/ayak.png",
-                                "1200 Adım",
-                              ),
-                              _buildBottomCard(
-                                "Kan Oksijen Seviyesi",
-                                "images/kan.png",
-                                "96%",
-                              ),
-                              _buildBottomCard(
-                                "Stres Seviyesi",
-                                "images/stressed.png",
-                                "Düşük",
-                              ),
-                              _buildBottomCard(
-                                "Vücut Isısı",
-                                "images/sicaklik.png",
-                                "37°C",
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(height: 30),
-                      ],
+                      ),
                     ),
                   ),
-                ),
+                  // Hareketli Chat Bot Butonu
+                  AnimatedPositioned(
+                    duration: const Duration(milliseconds: 300),
+                    top: _botTop,
+                    left: _botLeft,
+                    child: GestureDetector(
+                      onPanUpdate: (details) {
+                        setState(() {
+                          _botTop += details.delta.dy;
+                          _botLeft += details.delta.dx;
+                        });
+                      },
+                      onPanEnd: (_) {
+                        final screenWidth = MediaQuery.of(context).size.width;
+                        setState(() {
+                          _botLeft =
+                              _botLeft > screenWidth / 2
+                                  ? screenWidth - 70
+                                  : 10;
+                        });
+                      },
+                      child: _buildChatBotButton(),
+                    ),
+                  ),
+                ],
               ),
     );
   }
@@ -331,7 +358,6 @@ class _HomePageState extends State<HomePage> {
                 ),
               ],
             ),
-
             const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -417,7 +443,6 @@ class _HomePageState extends State<HomePage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                // Büyük Tansiyon
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: const [
@@ -477,7 +502,6 @@ class _HomePageState extends State<HomePage> {
                     thickness: 3,
                   ),
                 ),
-                // Küçük Tansiyon
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: const [
@@ -573,7 +597,7 @@ class _HomePageState extends State<HomePage> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: SizedBox(
-        height: 220, // sayfa yüksekliği burada sabitlenir
+        height: 220,
         child: Container(
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.9),
@@ -595,13 +619,34 @@ class _HomePageState extends State<HomePage> {
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 12),
-              SizedBox(
-                height: 150, // grafiğe ayrılan alan
-                child: LineChartSample(),
-              ),
+              SizedBox(height: 150, child: LineChartSample()),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildChatBotButton() {
+    return GestureDetector(
+      onTap: () {
+        // Henüz işlem yok
+      },
+      child: Container(
+        width: 60,
+        height: 60,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: const Color.fromARGB(255, 5, 153, 138),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 6,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: const Icon(Icons.chat, color: Colors.white, size: 30),
       ),
     );
   }

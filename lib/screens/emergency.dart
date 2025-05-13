@@ -10,9 +10,6 @@ class Emergency extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Debug için arka plan resmi yüklenip yüklenmediğini kontrol ediyoruz
-    final AssetImage assetImage = AssetImage('images/arka_plan.png');
-
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -21,6 +18,7 @@ class Emergency extends StatelessWidget {
       ),
       body: Stack(
         children: [
+          // Arka plan resmi
           Positioned.fill(
             child: Image.asset('images/arka_plan.png', fit: BoxFit.cover),
           ),
@@ -28,27 +26,44 @@ class Emergency extends StatelessWidget {
             padding: const EdgeInsets.all(16.0),
             child: Column(
               children: [
+                const SizedBox(height: 16),
+                // ACİL BUTONU (DAİRESEL ve MODERN)
                 Center(
-                  child: ElevatedButton(
-                    onPressed: () {},
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 60,
-                        vertical: 60,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: const LinearGradient(
+                        colors: [Colors.red, Color(0xFFB71C1C)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
-                      shape: const CircleBorder(),
-                      elevation: 10,
-                      shadowColor: Colors.black54,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.red.shade900.withOpacity(0.4),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
                     ),
-                    child: const Text(
-                      'ACİL',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 30,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 2,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        // Acil işlem yapılacaksa buraya
+                      },
+                      style: ElevatedButton.styleFrom(
+                        shape: const CircleBorder(),
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        padding: const EdgeInsets.all(60),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        'ACİL',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 30,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 2,
+                        ),
                       ),
                     ),
                   ),
@@ -65,28 +80,27 @@ class Emergency extends StatelessWidget {
                   style: TextStyle(fontSize: 15, color: Colors.black54),
                 ),
                 const SizedBox(height: 12),
-                ...contacts
-                    .map(
-                      (contact) => Container(
-                        margin: const EdgeInsets.only(bottom: 10),
-                        decoration: BoxDecoration(
-                          color: const Color(0x4D5150B2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: ListTile(
-                          leading: const Icon(Icons.person),
-                          title: Text(
-                            contact['name']!,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.phone, color: Colors.black),
-                            onPressed: () => _makePhoneCall(contact['phone']!),
-                          ),
-                        ),
+                // Yakınlar listesi
+                ...contacts.map(
+                  (contact) => Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0x4D5150B2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: ListTile(
+                      leading: const Icon(Icons.person),
+                      title: Text(
+                        contact['name']!,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
-                    )
-                    .toList(),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.phone, color: Colors.black),
+                        onPressed: () => _makePhoneCall(contact['phone']!),
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
