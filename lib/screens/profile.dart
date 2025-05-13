@@ -1,4 +1,5 @@
-import 'package:flutter/cupertino.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -9,33 +10,19 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   bool isEditing = false;
 
-  final TextEditingController nameController = TextEditingController(
-    text: "Sudenaz Kartal",
-  );
-  final TextEditingController birthDateController = TextEditingController(
-    text: "01.01.2000",
-  );
-  final TextEditingController genderController = TextEditingController(
-    text: "Kadın",
-  );
-  final TextEditingController bloodGroupController = TextEditingController(
-    text: "A+",
-  );
-  final TextEditingController heightController = TextEditingController(
-    text: "170 cm",
-  );
-  final TextEditingController weightController = TextEditingController(
-    text: "60 kg",
-  );
-  final TextEditingController phoneController = TextEditingController(
-    text: "05*",
-  );
-  final TextEditingController emailController = TextEditingController(
-    text: "sudenazkartal55@gmail.com",
-  );
-  final TextEditingController diseaseController = TextEditingController();
+  final nameController = TextEditingController();
+  final birthDateController = TextEditingController();
+  final genderController = TextEditingController();
+  final bloodGroupController = TextEditingController();
+  final heightController = TextEditingController();
+  final weightController = TextEditingController();
+  final phoneController = TextEditingController();
+  final emailController = TextEditingController();
+  final diseaseController = TextEditingController();
 
-  final List<String> allDiseases = [
+  late Set<String> selectedDiseases = {};
+
+  final allDiseases = [
     'Tansiyon',
     'Diyabet',
     'Astım',
@@ -44,19 +31,6 @@ class _ProfilePageState extends State<ProfilePage> {
     "Panik Atak",
     "Uyku Apnesi ve Uyku Bozuklukları",
   ];
-
-  final List<String> bloodTypes = [
-    'A+',
-    'A-',
-    'B+',
-    'B-',
-    'AB+',
-    'AB-',
-    '0+',
-    '0-',
-  ];
-
-  late Set<String> selectedDiseases;
 
   final FocusNode nameFocus = FocusNode();
   final FocusNode phoneFocus = FocusNode();
@@ -71,27 +45,38 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   void initState() {
     super.initState();
-    selectedDiseases = {'Tansiyon', 'Diyabet'};
-    diseaseController.text = selectedDiseases.join('\n');
+    fetchUserProfile();
   }
 
-  @override
-  void dispose() {
-    nameFocus.dispose();
-    phoneFocus.dispose();
-    emailFocus.dispose();
-    genderFocus.dispose();
-    birthDateFocus.dispose();
-    bloodGroupFocus.dispose();
-    heightFocus.dispose();
-    weightFocus.dispose();
-    diseaseFocus.dispose();
-    super.dispose();
+  Future<void> fetchUserProfile() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    final doc =
+        await FirebaseFirestore.instance.collection('patients').doc(uid).get();
+    if (doc.exists) {
+      final data = doc.data()!;
+      setState(() {
+        nameController.text = data['name'] ?? '';
+        emailController.text = data['email'] ?? '';
+        phoneController.text = data['phone'] ?? '';
+        genderController.text = data['gender'] ?? '';
+        birthDateController.text = data['birthDate'] ?? '';
+        bloodGroupController.text = data['bloodType'] ?? '';
+        heightController.text = data['height'] ?? '';
+        weightController.text = data['weight'] ?? '';
+
+        if (data['diseases'] != null && data['diseases'] is List) {
+          selectedDiseases = Set<String>.from(data['diseases']);
+          diseaseController.text = selectedDiseases.join('\n');
+        }
+      });
+    }
   }
 
   void enableEditing(FocusNode focusNode) {
     setState(() => isEditing = true);
-    Future.delayed(Duration(milliseconds: 100), () {
+    Future.delayed(const Duration(milliseconds: 100), () {
       FocusScope.of(context).requestFocus(focusNode);
     });
   }
@@ -138,7 +123,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 style: const TextStyle(fontSize: 18),
                               ),
                               value: tempSelectedDiseases.contains(disease),
-                              onChanged: (bool? value) {
+                              onChanged: (value) {
                                 setModalState(() {
                                   if (value == true) {
                                     tempSelectedDiseases.add(disease);
@@ -178,7 +163,19 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // ... [showBirthDatePicker, showBloodGroupPicker, showNumberPicker metodları aynı şekilde korunabilir]
+  @override
+  void dispose() {
+    nameFocus.dispose();
+    phoneFocus.dispose();
+    emailFocus.dispose();
+    genderFocus.dispose();
+    birthDateFocus.dispose();
+    bloodGroupFocus.dispose();
+    heightFocus.dispose();
+    weightFocus.dispose();
+    diseaseFocus.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -248,7 +245,7 @@ class _ProfilePageState extends State<ProfilePage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
+        boxShadow: const [
           BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3)),
         ],
       ),

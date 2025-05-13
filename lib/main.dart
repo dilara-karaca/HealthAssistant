@@ -135,7 +135,7 @@ class _AltNavigasyonState extends State<AltNavigasyon> {
   int _seciliIndex = 0;
 
   final List<Widget> _sayfalar = [
-    const HomePage(), // Hasta Ana Sayfası (Datalar + chart)
+    const HomePage(),
     general_settings.Settings(),
   ];
 
