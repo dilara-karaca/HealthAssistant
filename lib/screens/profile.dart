@@ -1,6 +1,7 @@
+import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 class ProfilePage extends StatefulWidget {
   @override
@@ -8,8 +9,6 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  bool isEditing = false;
-
   final nameController = TextEditingController();
   final birthDateController = TextEditingController();
   final genderController = TextEditingController();
@@ -31,16 +30,6 @@ class _ProfilePageState extends State<ProfilePage> {
     "Panik Atak",
     "Uyku Apnesi ve Uyku Bozuklukları",
   ];
-
-  final FocusNode nameFocus = FocusNode();
-  final FocusNode phoneFocus = FocusNode();
-  final FocusNode emailFocus = FocusNode();
-  final FocusNode diseaseFocus = FocusNode();
-  final FocusNode genderFocus = FocusNode();
-  final FocusNode birthDateFocus = FocusNode();
-  final FocusNode bloodGroupFocus = FocusNode();
-  final FocusNode heightFocus = FocusNode();
-  final FocusNode weightFocus = FocusNode();
 
   @override
   void initState() {
@@ -65,7 +54,6 @@ class _ProfilePageState extends State<ProfilePage> {
         bloodGroupController.text = data['bloodType'] ?? '';
         heightController.text = data['height'] ?? '';
         weightController.text = data['weight'] ?? '';
-
         if (data['diseases'] != null && data['diseases'] is List) {
           selectedDiseases = Set<String>.from(data['diseases']);
           diseaseController.text = selectedDiseases.join('\n');
@@ -74,11 +62,323 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  void enableEditing(FocusNode focusNode) {
-    setState(() => isEditing = true);
-    Future.delayed(const Duration(milliseconds: 100), () {
-      FocusScope.of(context).requestFocus(focusNode);
+  Future<void> updateSingleField(String field, String value) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    await FirebaseFirestore.instance.collection('patients').doc(uid).update({
+      field: value,
     });
+  }
+
+  void showEditableDialog({
+    required String label,
+    required TextEditingController controller,
+    required String field,
+  }) {
+    final tempController = TextEditingController(text: controller.text);
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: Text(label),
+            content: TextField(controller: tempController, autofocus: true),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text("İptal"),
+              ),
+              TextButton(
+                onPressed: () {
+                  setState(() => controller.text = tempController.text);
+                  updateSingleField(field, tempController.text);
+                  Navigator.pop(context);
+                },
+                child: Text("Kaydet"),
+              ),
+            ],
+          ),
+    );
+  }
+
+  void showPhoneInputDialog() {
+    final tempController = TextEditingController(text: phoneController.text);
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: Text("Telefon Numarası"),
+            content: TextField(
+              controller: tempController,
+              keyboardType: TextInputType.number,
+              maxLength: 10, // 10 hane olacak şekilde sınırlandı
+              buildCounter: (
+                BuildContext context, {
+                required int currentLength,
+                required bool isFocused,
+                required int? maxLength,
+              }) {
+                return null; // Sayaç gizlendi
+              },
+              decoration: InputDecoration(
+                prefixText: "+90 | ",
+                hintText: "5xx xxx xx xx",
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text("İptal"),
+              ),
+              TextButton(
+                onPressed: () {
+                  if (tempController.text.length == 10) {
+                    setState(() => phoneController.text = tempController.text);
+                    updateSingleField('phone', tempController.text);
+                    Navigator.pop(context);
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text("Lütfen 10 haneli bir numara girin."),
+                      ),
+                    );
+                  }
+                },
+                child: Text("Kaydet"),
+              ),
+            ],
+          ),
+    );
+  }
+
+  void showGenderPicker() {
+    String? selectedGender = genderController.text;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    "Cinsiyet Seçimi",
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 10),
+                  RadioListTile<String>(
+                    title: const Text("Kadın"),
+                    value: "Kadın",
+                    groupValue: selectedGender,
+                    onChanged: (value) {
+                      setModalState(() => selectedGender = value);
+                    },
+                  ),
+                  RadioListTile<String>(
+                    title: const Text("Erkek"),
+                    value: "Erkek",
+                    groupValue: selectedGender,
+                    onChanged: (value) {
+                      setModalState(() => selectedGender = value);
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text("İptal"),
+                      ),
+                      ElevatedButton(
+                        onPressed: () {
+                          if (selectedGender != null) {
+                            setState(
+                              () => genderController.text = selectedGender!,
+                            );
+                            updateSingleField('gender', selectedGender!);
+                          }
+                          Navigator.pop(context);
+                        },
+                        child: const Text("Kaydet"),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void showDatePickerDialog() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime(2000),
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) {
+      final formatted = DateFormat('dd.MM.yyyy').format(picked);
+      setState(() => birthDateController.text = formatted);
+      updateSingleField('birthDate', formatted);
+    }
+  }
+
+  void showBloodTypePicker() {
+    final bloodTypes = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', '0+', '0-'];
+    String? selectedBlood = bloodGroupController.text;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    "Kan Grubu Seçimi",
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 10),
+                  ...bloodTypes.map((type) {
+                    return RadioListTile<String>(
+                      title: Text(type),
+                      value: type,
+                      groupValue: selectedBlood,
+                      onChanged: (value) {
+                        setModalState(() => selectedBlood = value);
+                      },
+                    );
+                  }).toList(),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text("İptal"),
+                      ),
+                      ElevatedButton(
+                        onPressed: () {
+                          if (selectedBlood != null) {
+                            setState(
+                              () => bloodGroupController.text = selectedBlood!,
+                            );
+                            updateSingleField('bloodType', selectedBlood!);
+                          }
+                          Navigator.pop(context);
+                        },
+                        child: const Text("Kaydet"),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void showNumberPickerDialog({
+    required TextEditingController controller,
+    required int min,
+    required int max,
+    required String unit,
+  }) {
+    int selectedValue =
+        int.tryParse(controller.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? min;
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        FixedExtentScrollController scrollController =
+            FixedExtentScrollController(initialItem: selectedValue - min);
+
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              height: 300,
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+              child: Column(
+                children: [
+                  const Text(
+                    'Değer Seçimi',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: ListWheelScrollView.useDelegate(
+                      controller: scrollController,
+                      itemExtent: 50,
+                      physics: const FixedExtentScrollPhysics(),
+                      onSelectedItemChanged: (index) {
+                        setModalState(() {
+                          selectedValue = min + index;
+                        });
+                      },
+                      childDelegate: ListWheelChildBuilderDelegate(
+                        builder: (context, index) {
+                          final value = min + index;
+                          return Center(
+                            child: Text(
+                              "$value $unit",
+                              style: const TextStyle(fontSize: 24),
+                            ),
+                          );
+                        },
+                        childCount: max - min + 1,
+                      ),
+                    ),
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text("İptal"),
+                      ),
+                      ElevatedButton(
+                        onPressed: () {
+                          final selectedText = "$selectedValue $unit";
+                          setState(() => controller.text = selectedText);
+                          updateSingleField(
+                            unit == "cm" ? 'height' : 'weight',
+                            selectedText,
+                          );
+                          Navigator.pop(context);
+                        },
+                        child: const Text("Kaydet"),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   void showDiseaseSelectionPanel() {
@@ -144,6 +444,10 @@ class _ProfilePageState extends State<ProfilePage> {
                               '\n',
                             );
                           });
+                          FirebaseFirestore.instance
+                              .collection('patients')
+                              .doc(FirebaseAuth.instance.currentUser!.uid)
+                              .update({'diseases': selectedDiseases.toList()});
                           Navigator.pop(context);
                         },
                         child: const Text(
@@ -164,20 +468,6 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   @override
-  void dispose() {
-    nameFocus.dispose();
-    phoneFocus.dispose();
-    emailFocus.dispose();
-    genderFocus.dispose();
-    birthDateFocus.dispose();
-    bloodGroupFocus.dispose();
-    heightFocus.dispose();
-    weightFocus.dispose();
-    diseaseFocus.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -193,39 +483,80 @@ class _ProfilePageState extends State<ProfilePage> {
       backgroundColor: const Color(0xFFEAF4F4),
       body: SafeArea(
         child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              children: [
-                _buildEditableTile("Ad-Soyad", nameController, nameFocus),
-                _buildEditableTile(
-                  "Telefon Numarası",
-                  phoneController,
-                  phoneFocus,
-                ),
-                _buildEditableTile("Email", emailController, emailFocus),
-                _buildEditableTile("Cinsiyet", genderController, genderFocus),
-                _buildEditableTile(
-                  "Doğum Tarihi",
-                  birthDateController,
-                  birthDateFocus,
-                ),
-                _buildEditableTile(
-                  "Kan Grubu",
-                  bloodGroupController,
-                  bloodGroupFocus,
-                ),
-                _buildEditableTile("Boy", heightController, heightFocus),
-                _buildEditableTile("Kilo", weightController, weightFocus),
-                _buildEditableTile(
-                  "Kayıtlı Hastalıklar",
-                  diseaseController,
-                  diseaseFocus,
-                  maxLines: 4,
-                  onEdit: showDiseaseSelectionPanel,
-                ),
-              ],
-            ),
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              _buildEditableTile(
+                "Ad-Soyad",
+                nameController,
+                field: 'name',
+                onEdit:
+                    () => showEditableDialog(
+                      label: "Ad-Soyad",
+                      controller: nameController,
+                      field: 'name',
+                    ),
+              ),
+              _buildEditableTile(
+                "Telefon Numarası",
+                phoneController,
+                onEdit: showPhoneInputDialog,
+              ),
+              _buildEditableTile(
+                "Email",
+                emailController,
+                field: 'email',
+                onEdit:
+                    () => showEditableDialog(
+                      label: "Email",
+                      controller: emailController,
+                      field: 'email',
+                    ),
+              ),
+              _buildEditableTile(
+                "Cinsiyet",
+                genderController,
+                onEdit: showGenderPicker,
+              ),
+              _buildEditableTile(
+                "Doğum Tarihi",
+                birthDateController,
+                onEdit: showDatePickerDialog,
+              ),
+              _buildEditableTile(
+                "Kan Grubu",
+                bloodGroupController,
+                onEdit: showBloodTypePicker,
+              ),
+              _buildEditableTile(
+                "Boy",
+                heightController,
+                onEdit:
+                    () => showNumberPickerDialog(
+                      controller: heightController,
+                      min: 120,
+                      max: 220,
+                      unit: "cm",
+                    ),
+              ),
+              _buildEditableTile(
+                "Kilo",
+                weightController,
+                onEdit:
+                    () => showNumberPickerDialog(
+                      controller: weightController,
+                      min: 30,
+                      max: 150,
+                      unit: "kg",
+                    ),
+              ),
+              _buildEditableTile(
+                "Kayıtlı Hastalıklar",
+                diseaseController,
+                maxLines: 4,
+                onEdit: showDiseaseSelectionPanel,
+              ),
+            ],
           ),
         ),
       ),
@@ -234,10 +565,10 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Widget _buildEditableTile(
     String label,
-    TextEditingController controller,
-    FocusNode focusNode, {
+    TextEditingController controller, {
     int maxLines = 1,
     VoidCallback? onEdit,
+    String? field,
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -266,8 +597,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 const SizedBox(height: 8),
                 TextField(
                   controller: controller,
-                  focusNode: focusNode,
-                  enabled: isEditing && onEdit == null,
+                  enabled: false,
                   maxLines: maxLines,
                   decoration: const InputDecoration.collapsed(hintText: ""),
                   style: const TextStyle(
@@ -279,10 +609,11 @@ class _ProfilePageState extends State<ProfilePage> {
               ],
             ),
           ),
-          GestureDetector(
-            onTap: onEdit ?? () => enableEditing(focusNode),
-            child: Icon(Icons.edit, size: 20, color: Colors.grey[700]),
-          ),
+          if (onEdit != null)
+            GestureDetector(
+              onTap: onEdit,
+              child: Icon(Icons.edit, size: 20, color: Colors.grey[700]),
+            ),
         ],
       ),
     );
