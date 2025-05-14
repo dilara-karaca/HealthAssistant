@@ -278,6 +278,18 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
     final weight = weightController.text.trim();
     final height = heightController.text.trim();
 
+    if (name.isEmpty ||
+        surname.isEmpty ||
+        email.isEmpty ||
+        phone.isEmpty ||
+        weight.isEmpty ||
+        height.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Lütfen tüm alanları doldurunuz.")),
+      );
+      return;
+    }
+
     if (password != confirmPassword) {
       ScaffoldMessenger.of(
         context,
@@ -288,6 +300,15 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
     if (password.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Şifre en az 6 karakter olmalı.")),
+      );
+      return;
+    }
+
+    if (selectedDiseases.isEmpty ||
+        selectedBloodType == null ||
+        selectedGender == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Lütfen tüm bilgileri eksiksiz giriniz.")),
       );
       return;
     }
@@ -315,7 +336,10 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
         final existing =
             await FirebaseFirestore.instance
                 .collection('patients')
-                .where('patientCode', isEqualTo: patientCode)
+                .where(
+                  'patientCode',
+                  isEqualTo: patientCode.toUpperCase(),
+                ) // 🔄 kontrol de büyük harf
                 .get();
         codeExists = existing.docs.isNotEmpty;
       } while (codeExists);
@@ -331,14 +355,18 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
         'gender': selectedGender,
         'bloodType': selectedBloodType,
         'diseases': selectedDiseases,
-        'patientCode': patientCode,
+        'patientCode': patientCode.toUpperCase(), // ✅ büyük harfle kaydedildi
         'role': 'patient',
         'createdAt': Timestamp.now(),
       });
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Kayıt başarılı!")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Kayıt başarılı! Giriş ekranına yönlendiriliyorsunuz."),
+        ),
+      );
+
+      await Future.delayed(const Duration(milliseconds: 500));
       Navigator.pushReplacementNamed(context, '/loginEmail');
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(

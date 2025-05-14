@@ -33,94 +33,88 @@ class _RegisterRelativeScreenState extends State<RegisterRelativeScreen> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                const Text(
-                  'Kronik Hasta Takip',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const Text(
+                'Kronik Hasta Takip',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 20),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: Image.asset(
+                  'images/adsiz_tasarim_14.png',
+                  width: 120,
+                  height: 120,
                 ),
-                const SizedBox(height: 20),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(24),
-                  child: Image.asset(
-                    'images/adsiz_tasarim_14.png',
-                    width: 120,
-                    height: 120,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(color: Colors.black12, blurRadius: 8),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextButton(
-                          onPressed:
-                              () => Navigator.pushNamed(
-                                context,
-                                '/registerPatient',
-                              ),
-                          child: const Text(
-                            'Hasta',
-                            style: TextStyle(color: Colors.black87),
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: TextButton(
-                          onPressed: () {},
-                          style: TextButton.styleFrom(
-                            backgroundColor: Colors.black87,
-                          ),
-                          child: const Text(
-                            'Hasta Yakını',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-                buildInputField(label: 'Ad', controller: nameController),
-                buildInputField(label: 'Soyad', controller: surnameController),
-                buildInputField(label: 'E-posta', controller: emailController),
-                buildInputField(
-                  label: 'Telefon Numarası',
-                  controller: phoneController,
-                ),
-                buildInputField(
-                  label: 'Şifre',
-                  controller: passwordController,
-                  obscureText: true,
-                ),
-                buildInputField(
-                  label: 'Şifre Tekrar',
-                  controller: confirmPasswordController,
-                  obscureText: true,
-                ),
-                buildInputField(
-                  label: 'Hasta Bağlantı Kodu',
-                  controller: patientCodeController,
-                ),
-                const SizedBox(height: 20),
-                GestureDetector(
-                  onTap: _registerRelative,
-                  child: Image.asset('images/frame_60.png', width: 120),
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 20),
+              _buildUserTypeSwitch(),
+              const SizedBox(height: 20),
+              buildInputField(label: 'Ad', controller: nameController),
+              buildInputField(label: 'Soyad', controller: surnameController),
+              buildInputField(label: 'E-posta', controller: emailController),
+              buildInputField(
+                label: 'Telefon Numarası',
+                controller: phoneController,
+              ),
+              buildInputField(
+                label: 'Şifre',
+                controller: passwordController,
+                obscureText: true,
+              ),
+              buildInputField(
+                label: 'Şifre Tekrar',
+                controller: confirmPasswordController,
+                obscureText: true,
+              ),
+              buildInputField(
+                label: 'Hasta Bağlantı Kodu',
+                controller: patientCodeController,
+              ),
+              const SizedBox(height: 20),
+              GestureDetector(
+                onTap: _registerRelative,
+                child: Image.asset('images/frame_60.png', width: 120),
+              ),
+            ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildUserTypeSwitch() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8)],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextButton(
+              onPressed: () => Navigator.pushNamed(context, '/registerPatient'),
+              child: const Text(
+                'Hasta',
+                style: TextStyle(color: Colors.black87),
+              ),
+            ),
+          ),
+          Expanded(
+            child: TextButton(
+              onPressed: () {},
+              style: TextButton.styleFrom(backgroundColor: Colors.black87),
+              child: const Text(
+                'Hasta Yakını',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -155,7 +149,18 @@ class _RegisterRelativeScreenState extends State<RegisterRelativeScreen> {
     final phone = phoneController.text.trim();
     final password = passwordController.text.trim();
     final confirmPassword = confirmPasswordController.text.trim();
-    final patientCode = patientCodeController.text.trim();
+    final patientCode = patientCodeController.text.trim().toUpperCase();
+
+    if (name.isEmpty ||
+        surname.isEmpty ||
+        email.isEmpty ||
+        phone.isEmpty ||
+        patientCode.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Tüm alanları doldurmalısınız.")),
+      );
+      return;
+    }
 
     if (password != confirmPassword) {
       ScaffoldMessenger.of(
@@ -174,8 +179,11 @@ class _RegisterRelativeScreenState extends State<RegisterRelativeScreen> {
     try {
       final patientQuery =
           await FirebaseFirestore.instance
-              .collection('patients') // ✅ Hasta kayıtları burada aranmalı
-              .where('patientCode', isEqualTo: patientCode)
+              .collection('patients')
+              .where(
+                'patientCode',
+                isEqualTo: patientCode,
+              ) // Büyük harf ile eşleşme
               .limit(1)
               .get();
 
@@ -186,8 +194,7 @@ class _RegisterRelativeScreenState extends State<RegisterRelativeScreen> {
         return;
       }
 
-      final patientDoc = patientQuery.docs.first;
-      final patientId = patientDoc.id;
+      final patientId = patientQuery.docs.first.id;
 
       final userCredential = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(email: email, password: password);
@@ -208,9 +215,12 @@ class _RegisterRelativeScreenState extends State<RegisterRelativeScreen> {
           });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Kayıt başarıyla tamamlandı.")),
+        const SnackBar(
+          content: Text("Kayıt başarılı! Giriş ekranına yönlendiriliyorsunuz."),
+        ),
       );
 
+      await Future.delayed(const Duration(milliseconds: 500));
       Navigator.pushReplacementNamed(context, '/loginEmail');
     } catch (e) {
       ScaffoldMessenger.of(

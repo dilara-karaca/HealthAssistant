@@ -45,8 +45,10 @@ class _ProfilePageState extends State<ProfilePage> {
         await FirebaseFirestore.instance.collection('patients').doc(uid).get();
     if (doc.exists) {
       final data = doc.data()!;
+      final name = data['name'] ?? '';
+      final surname = data['surname'] ?? '';
       setState(() {
-        nameController.text = data['name'] ?? '';
+        nameController.text = '$name $surname';
         emailController.text = data['email'] ?? '';
         phoneController.text = data['phone'] ?? '';
         genderController.text = data['gender'] ?? '';
@@ -65,9 +67,20 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<void> updateSingleField(String field, String value) async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
-    await FirebaseFirestore.instance.collection('patients').doc(uid).update({
-      field: value,
-    });
+
+    if (field == 'name_surname') {
+      final parts = value.trim().split(' ');
+      final name = parts.first;
+      final surname = parts.length > 1 ? parts.sublist(1).join(' ') : '';
+      await FirebaseFirestore.instance.collection('patients').doc(uid).update({
+        'name': name,
+        'surname': surname,
+      });
+    } else {
+      await FirebaseFirestore.instance.collection('patients').doc(uid).update({
+        field: value,
+      });
+    }
   }
 
   void showEditableDialog({
@@ -90,7 +103,11 @@ class _ProfilePageState extends State<ProfilePage> {
               TextButton(
                 onPressed: () {
                   setState(() => controller.text = tempController.text);
-                  updateSingleField(field, tempController.text);
+                  if (field == 'name_surname') {
+                    updateSingleField('name_surname', tempController.text);
+                  } else {
+                    updateSingleField(field, tempController.text);
+                  }
                   Navigator.pop(context);
                 },
                 child: Text("Kaydet"),
@@ -110,15 +127,14 @@ class _ProfilePageState extends State<ProfilePage> {
             content: TextField(
               controller: tempController,
               keyboardType: TextInputType.number,
-              maxLength: 10, // 10 hane olacak şekilde sınırlandı
-              buildCounter: (
-                BuildContext context, {
-                required int currentLength,
-                required bool isFocused,
-                required int? maxLength,
-              }) {
-                return null; // Sayaç gizlendi
-              },
+              maxLength: 10,
+              buildCounter:
+                  (
+                    _, {
+                    required int currentLength,
+                    required bool isFocused,
+                    required int? maxLength,
+                  }) => null,
               decoration: InputDecoration(
                 prefixText: "+90 | ",
                 hintText: "5xx xxx xx xx",
@@ -152,7 +168,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
   void showGenderPicker() {
     String? selectedGender = genderController.text;
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -171,24 +186,20 @@ class _ProfilePageState extends State<ProfilePage> {
                     "Cinsiyet Seçimi",
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
-                  const SizedBox(height: 10),
                   RadioListTile<String>(
                     title: const Text("Kadın"),
                     value: "Kadın",
                     groupValue: selectedGender,
-                    onChanged: (value) {
-                      setModalState(() => selectedGender = value);
-                    },
+                    onChanged:
+                        (value) => setModalState(() => selectedGender = value),
                   ),
                   RadioListTile<String>(
                     title: const Text("Erkek"),
                     value: "Erkek",
                     groupValue: selectedGender,
-                    onChanged: (value) {
-                      setModalState(() => selectedGender = value);
-                    },
+                    onChanged:
+                        (value) => setModalState(() => selectedGender = value),
                   ),
-                  const SizedBox(height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
@@ -236,7 +247,6 @@ class _ProfilePageState extends State<ProfilePage> {
   void showBloodTypePicker() {
     final bloodTypes = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', '0+', '0-'];
     String? selectedBlood = bloodGroupController.text;
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -249,24 +259,20 @@ class _ProfilePageState extends State<ProfilePage> {
             return Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
-                mainAxisSize: MainAxisSize.min,
                 children: [
                   const Text(
                     "Kan Grubu Seçimi",
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
-                  const SizedBox(height: 10),
-                  ...bloodTypes.map((type) {
-                    return RadioListTile<String>(
+                  ...bloodTypes.map(
+                    (type) => RadioListTile<String>(
                       title: Text(type),
                       value: type,
                       groupValue: selectedBlood,
-                      onChanged: (value) {
-                        setModalState(() => selectedBlood = value);
-                      },
-                    );
-                  }).toList(),
-                  const SizedBox(height: 16),
+                      onChanged:
+                          (value) => setModalState(() => selectedBlood = value),
+                    ),
+                  ),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
@@ -305,7 +311,6 @@ class _ProfilePageState extends State<ProfilePage> {
   }) {
     int selectedValue =
         int.tryParse(controller.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? min;
-
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -314,39 +319,33 @@ class _ProfilePageState extends State<ProfilePage> {
       builder: (context) {
         FixedExtentScrollController scrollController =
             FixedExtentScrollController(initialItem: selectedValue - min);
-
         return StatefulBuilder(
           builder: (context, setModalState) {
             return Container(
               height: 300,
-              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+              padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
                   const Text(
                     'Değer Seçimi',
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
-                  const SizedBox(height: 12),
                   Expanded(
                     child: ListWheelScrollView.useDelegate(
                       controller: scrollController,
                       itemExtent: 50,
                       physics: const FixedExtentScrollPhysics(),
-                      onSelectedItemChanged: (index) {
-                        setModalState(() {
-                          selectedValue = min + index;
-                        });
-                      },
+                      onSelectedItemChanged:
+                          (index) =>
+                              setModalState(() => selectedValue = min + index),
                       childDelegate: ListWheelChildBuilderDelegate(
-                        builder: (context, index) {
-                          final value = min + index;
-                          return Center(
-                            child: Text(
-                              "$value $unit",
-                              style: const TextStyle(fontSize: 24),
+                        builder:
+                            (context, index) => Center(
+                              child: Text(
+                                "${min + index} $unit",
+                                style: TextStyle(fontSize: 24),
+                              ),
                             ),
-                          );
-                        },
                         childCount: max - min + 1,
                       ),
                     ),
@@ -383,7 +382,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
   void showDiseaseSelectionPanel() {
     Set<String> tempSelectedDiseases = Set.from(selectedDiseases);
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -410,7 +408,6 @@ class _ProfilePageState extends State<ProfilePage> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(height: 10),
                       Expanded(
                         child: ListView.builder(
                           controller: scrollController,
@@ -455,7 +452,6 @@ class _ProfilePageState extends State<ProfilePage> {
                           style: TextStyle(fontSize: 20),
                         ),
                       ),
-                      const SizedBox(height: 16),
                     ],
                   ),
                 );
@@ -489,12 +485,12 @@ class _ProfilePageState extends State<ProfilePage> {
               _buildEditableTile(
                 "Ad-Soyad",
                 nameController,
-                field: 'name',
+                field: 'name_surname',
                 onEdit:
                     () => showEditableDialog(
                       label: "Ad-Soyad",
                       controller: nameController,
-                      field: 'name',
+                      field: 'name_surname',
                     ),
               ),
               _buildEditableTile(

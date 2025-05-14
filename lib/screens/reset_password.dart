@@ -55,9 +55,9 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
 
       Navigator.pop(context);
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Hata oluştu: ${e.toString()}")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Şifre güncellenemedi: ${e.toString()}")),
+      );
     }
   }
 
@@ -114,7 +114,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                   },
                   style: ElevatedButton.styleFrom(
                     foregroundColor: Colors.white,
-                    backgroundColor: Color(0xFF305058),
+                    backgroundColor: const Color(0xFF305058),
                     padding: const EdgeInsets.symmetric(
                       horizontal: 24,
                       vertical: 14,
@@ -157,12 +157,14 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
         ),
       ),
       validator: (value) {
-        if (value == null || value.isEmpty) return 'Bu alan boş bırakılamaz';
-        if (label.contains("Tekrar") && value != _newPasswordController.text) {
-          return 'Şifreler eşleşmiyor';
+        if (value == null || value.isEmpty) {
+          return 'Bu alan boş bırakılamaz';
         }
         if (label.contains("Yeni") && value.length < 6) {
           return 'Yeni şifre en az 6 karakter olmalı';
+        }
+        if (label.contains("Tekrar") && value != _newPasswordController.text) {
+          return 'Şifreler eşleşmiyor';
         }
         return null;
       },

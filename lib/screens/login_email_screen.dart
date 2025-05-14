@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class LoginEmailScreen extends StatefulWidget {
   const LoginEmailScreen({super.key});
@@ -26,37 +25,13 @@ class _LoginEmailScreenState extends State<LoginEmailScreen> {
     }
 
     try {
-      final userCredential = await FirebaseAuth.instance
-          .signInWithEmailAndPassword(email: email, password: password);
-      final uid = userCredential.user!.uid;
-
-      final patientSnapshot =
-          await FirebaseFirestore.instance
-              .collection("patients")
-              .doc(uid)
-              .get();
-
-      if (patientSnapshot.exists &&
-          patientSnapshot.data()?['role'] == 'patient') {
-        Navigator.pushReplacementNamed(context, '/home');
-        return;
-      }
-
-      final relativeSnapshot =
-          await FirebaseFirestore.instance
-              .collection("relatives")
-              .doc(uid)
-              .get();
-
-      if (relativeSnapshot.exists &&
-          relativeSnapshot.data()?['role'] == "relative") {
-        Navigator.pushReplacementNamed(context, '/relativeHome');
-        return;
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Kullanıcı rolü belirlenemedi.")),
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: password,
       );
+
+      // 🔽 Rol kontrolünü RedirectAfterLogin widget'ı yapacak
+      Navigator.pushReplacementNamed(context, '/redirectAfterLogin');
     } on FirebaseAuthException catch (e) {
       ScaffoldMessenger.of(
         context,

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:kronik_hasta_takip/screens/forgot_password_screen.dart';
 import 'firebase_options.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -11,6 +10,7 @@ import 'screens/login_phone_screen.dart';
 import 'screens/login_sms_screen.dart';
 import 'screens/register_patient_screen.dart';
 import 'screens/register_relative_screen.dart';
+import 'screens/forgot_password_screen.dart';
 import 'screens/forgot_password_verify_screen.dart';
 import 'screens/forgot_password_reset_screen.dart';
 import 'screens/emergency.dart';
@@ -19,7 +19,7 @@ import 'screens/patients_settings.dart';
 import 'screens/patients_profile.dart';
 import 'screens/patients_security.dart';
 import 'screens/patients_help.dart';
-import 'screens/home_page.dart'; // Hasta ekranı
+import 'screens/home_page.dart';
 import 'screens/settings.dart' as general_settings;
 
 void main() async {
@@ -67,23 +67,22 @@ class RedirectAfterLogin extends StatelessWidget {
 
   Future<String?> getUserRole() async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      final patientsDoc =
-          await FirebaseFirestore.instance
-              .collection('patients')
-              .doc(user.uid)
-              .get();
+    if (user == null) return null;
 
-      if (patientsDoc.exists) return 'patient';
+    final patientsDoc =
+        await FirebaseFirestore.instance
+            .collection('patients')
+            .doc(user.uid)
+            .get();
+    if (patientsDoc.exists) return 'patient';
 
-      final relativesDoc =
-          await FirebaseFirestore.instance
-              .collection('relatives')
-              .doc(user.uid)
-              .get();
+    final relativesDoc =
+        await FirebaseFirestore.instance
+            .collection('relatives')
+            .doc(user.uid)
+            .get();
+    if (relativesDoc.exists) return 'relative';
 
-      if (relativesDoc.exists) return relativesDoc.data()?['role'];
-    }
     return null;
   }
 
@@ -98,27 +97,25 @@ class RedirectAfterLogin extends StatelessWidget {
           );
         } else if (snapshot.hasData) {
           final role = snapshot.data;
-          if (role == 'patient') {
-            Future.microtask(
-              () => Navigator.pushReplacementNamed(context, '/home'),
-            );
-          } else if (role == 'relative') {
-            Future.microtask(
-              () => Navigator.pushReplacementNamed(context, '/relativeHome'),
-            );
-          } else {
-            return const Scaffold(
-              body: Center(child: Text('Geçersiz kullanıcı rolü.')),
-            );
-          }
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (role == 'patient') {
+              Navigator.pushReplacementNamed(context, '/home');
+            } else if (role == 'relative') {
+              Navigator.pushReplacementNamed(context, '/relativeHome');
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("Geçersiz kullanıcı rolü.")),
+              );
+            }
+          });
         } else {
           return const Scaffold(
             body: Center(
-              child: Text('Giriş başarısız veya kullanıcı verisi yok.'),
+              child: Text("Giriş başarısız veya kullanıcı verisi yok."),
             ),
           );
         }
-        return const SizedBox();
+        return const SizedBox(); // boş widget
       },
     );
   }
@@ -160,7 +157,7 @@ class _AltNavigasyonState extends State<AltNavigasyon> {
           onPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => Emergency()),
+              MaterialPageRoute(builder: (context) => const Emergency()),
             );
           },
         ),
