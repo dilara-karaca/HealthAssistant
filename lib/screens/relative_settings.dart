@@ -1,7 +1,9 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'profile.dart';
-import 'security.dart';
-import 'help.dart';
+import 'package:kronik_hasta_takip/screens/login_email_screen.dart';
+import 'package:kronik_hasta_takip/screens/relative_profile.dart';
+import 'relative_help.dart';
+import 'relative_security.dart' show RelativeSecurity;
 
 class PatientsSettings extends StatelessWidget {
   final double titleFontSize = 20;
@@ -42,7 +44,9 @@ class PatientsSettings extends StatelessWidget {
                   onTap:
                       () => Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => ProfilePage()),
+                        MaterialPageRoute(
+                          builder: (context) => RelativeProfile(),
+                        ),
                       ),
                   fontSize: titleFontSize,
                 ),
@@ -53,7 +57,9 @@ class PatientsSettings extends StatelessWidget {
                   onTap:
                       () => Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => SecurityPage()),
+                        MaterialPageRoute(
+                          builder: (context) => RelativeSecurity(),
+                        ),
                       ),
                   fontSize: titleFontSize,
                 ),
@@ -64,8 +70,59 @@ class PatientsSettings extends StatelessWidget {
                   onTap:
                       () => Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => HelpPage()),
+                        MaterialPageRoute(builder: (context) => RelativeHelp()),
                       ),
+                  fontSize: titleFontSize,
+                ),
+                _buildSettingsTile(
+                  context,
+                  title: "Çıkış Yap",
+                  icon: Icons.logout,
+                  onTap: () async {
+                    final shouldLogout = await showDialog<bool>(
+                      context: context,
+                      builder:
+                          (context) => AlertDialog(
+                            title: const Text(
+                              "Çıkış Yap",
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                            content: const Text(
+                              "Çıkış yapmak istediğinize emin misiniz?",
+                              style: TextStyle(fontSize: 19),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed:
+                                    () => Navigator.of(context).pop(false),
+                                child: const Text(
+                                  "Hayır",
+                                  style: TextStyle(fontSize: 20),
+                                ),
+                              ),
+                              TextButton(
+                                onPressed:
+                                    () => Navigator.of(context).pop(true),
+                                child: const Text(
+                                  "Evet",
+                                  style: TextStyle(fontSize: 20),
+                                ),
+                              ),
+                            ],
+                          ),
+                    );
+
+                    if (shouldLogout == true) {
+                      await FirebaseAuth.instance.signOut();
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const LoginEmailScreen(),
+                        ),
+                        (route) => false,
+                      );
+                    }
+                  },
                   fontSize: titleFontSize,
                 ),
               ],

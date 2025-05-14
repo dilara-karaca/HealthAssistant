@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-class PatientsHelp extends StatelessWidget {
-  const PatientsHelp({super.key});
+class RelativeHelp extends StatelessWidget {
+  const RelativeHelp({super.key});
 
   final List<_HelpInfo> helpItems = const [
     _HelpInfo(

@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'maps.dart';
-import 'patients_security.dart';
-import 'patients_settings.dart';
+import 'relative_security.dart';
+import 'relative_settings.dart';
 
-class PatientHomePage extends StatefulWidget {
+class RelativeHomePage extends StatefulWidget {
   @override
-  _PatientDashboardState createState() => _PatientDashboardState();
+  RelativeHomePageState createState() => RelativeHomePageState();
 }
 
-class _PatientDashboardState extends State<PatientHomePage> {
+class RelativeHomePageState extends State<RelativeHomePage> {
   final TextStyle titleStyle = const TextStyle(
     fontSize: 24,
     fontWeight: FontWeight.w600,
@@ -16,23 +18,121 @@ class _PatientDashboardState extends State<PatientHomePage> {
   );
 
   final TextStyle valueStyle = const TextStyle(
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: FontWeight.w900,
-    color: Color.fromARGB(255, 94, 92, 92),
+    color: Colors.black,
   );
+
+  String? patientName;
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchPatientName();
+  }
+
+  String getPossessiveSuffix(String name) {
+    final lowerName = name.toLowerCase();
+    final vowels = ['a', 'e', 'ı', 'i', 'o', 'ö', 'u', 'ü'];
+    final lastVowel = lowerName
+        .split('')
+        .lastWhere((c) => vowels.contains(c), orElse: () => 'a');
+
+    String suffix;
+    if (['a', 'ı'].contains(lastVowel)) {
+      suffix = "'ın";
+    } else if (['e', 'i'].contains(lastVowel)) {
+      suffix = "'in";
+    } else if (['o', 'u'].contains(lastVowel)) {
+      suffix = "'un";
+    } else {
+      suffix = "'ün";
+    }
+
+    return "$name$suffix";
+  }
+
+  String addPossessiveSuffix(String name) {
+    if (name.isEmpty) return "Hasta'nın";
+
+    final vowels = 'aeıioöuü';
+    final lastVowel = name
+        .split('')
+        .reversed
+        .firstWhere(
+          (char) => vowels.contains(char.toLowerCase()),
+          orElse: () => 'a',
+        );
+
+    String suffix;
+    switch (lastVowel.toLowerCase()) {
+      case 'a':
+      case 'ı':
+        suffix = "'nın";
+        break;
+      case 'e':
+      case 'i':
+        suffix = "'nin";
+        break;
+      case 'o':
+      case 'u':
+        suffix = "'nun";
+        break;
+      case 'ö':
+      case 'ü':
+        suffix = "'nün";
+        break;
+      default:
+        suffix = "'nın";
+    }
+
+    return "$name$suffix";
+  }
+
+  Future<void> fetchPatientName() async {
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) return;
+
+      final relativeDoc =
+          await FirebaseFirestore.instance
+              .collection('relatives')
+              .doc(uid)
+              .get();
+
+      final linkedPatientId = relativeDoc.data()?['linkedPatient'];
+      if (linkedPatientId == null) return;
+
+      final patientDoc =
+          await FirebaseFirestore.instance
+              .collection('patients')
+              .doc(linkedPatientId)
+              .get();
+
+      final name = patientDoc.data()?['name'];
+      setState(() {
+        patientName = name ?? "Hasta";
+        isLoading = false;
+      });
+    } catch (e) {
+      print("Hasta adı alınamadı: $e");
+      setState(() => isLoading = false);
+    }
+  }
 
   void _showNotificationsPanel() {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
-      shape: RoundedRectangleBorder(
+      shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder:
           (context) => Container(
             width: MediaQuery.of(context).size.width * 0.95,
             height: 300,
-            padding: EdgeInsets.all(16),
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: const [
@@ -66,6 +166,11 @@ class _PatientDashboardState extends State<PatientHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final displayName =
+        isLoading || patientName == null
+            ? null
+            : "${getPossessiveSuffix(patientName!.split(' ').first)}";
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -73,12 +178,16 @@ class _PatientDashboardState extends State<PatientHomePage> {
           alignment: Alignment.centerLeft,
           child: Text(
             'Merhaba',
-            style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: 28,
+              color: Colors.black,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.notifications, color: Colors.black),
+            icon: const Icon(Icons.notifications, color: Colors.black),
             onPressed: _showNotificationsPanel,
           ),
         ],
@@ -100,10 +209,15 @@ class _PatientDashboardState extends State<PatientHomePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                "Sudenaz'ın Verileri",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
+              isLoading
+                  ? const CircularProgressIndicator()
+                  : Text(
+                    "$displayName Verileri",
+                    style: const TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
               const SizedBox(height: 16),
               buildInfoCard(
                 title: 'Kalp Atışı',
@@ -115,18 +229,14 @@ class _PatientDashboardState extends State<PatientHomePage> {
               buildInfoCard(
                 title: 'Vücut Sıcaklığı',
                 value: '37°C',
-                icon: Image.asset(
-                  'images/termostat.png',
-                  width: 42,
-                  height: 42,
-                ),
+                icon: Image.asset('images/sicaklik.png', width: 42, height: 42),
                 titleStyle: titleStyle,
                 valueStyle: valueStyle,
               ),
               buildInfoCard(
                 title: 'Kan Oksijen',
                 value: '96 %',
-                icon: Image.asset('images/oksijen.png', width: 42, height: 42),
+                icon: Image.asset('images/kan.png', width: 42, height: 42),
                 titleStyle: titleStyle,
                 valueStyle: valueStyle,
               ),
@@ -142,7 +252,7 @@ class _PatientDashboardState extends State<PatientHomePage> {
         ),
       ),
       bottomNavigationBar: BottomAppBar(
-        color: Color(0xFF303E58),
+        color: const Color(0xFF18202B),
         shape: const CircularNotchedRectangle(),
         notchMargin: 6.0,
         child: Container(
@@ -152,14 +262,12 @@ class _PatientDashboardState extends State<PatientHomePage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               IconButton(
-                icon: const Icon(Icons.home, size: 30, color: Colors.white),
-                onPressed: () {
-                  Navigator.pushNamed(context, '/home');
-                },
+                icon: const Icon(Icons.home, size: 40, color: Colors.white),
+                onPressed: () {},
               ),
-              SizedBox(width: 30),
+              const SizedBox(width: 30),
               IconButton(
-                icon: const Icon(Icons.settings, size: 30, color: Colors.white),
+                icon: const Icon(Icons.settings, size: 40, color: Colors.white),
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -177,7 +285,7 @@ class _PatientDashboardState extends State<PatientHomePage> {
         height: 80,
         child: FloatingActionButton(
           backgroundColor: Colors.red,
-          shape: CircleBorder(),
+          shape: const CircleBorder(),
           child: const Icon(Icons.location_on, color: Colors.white, size: 36),
           onPressed: () {
             Navigator.push(
@@ -196,15 +304,16 @@ class _PatientDashboardState extends State<PatientHomePage> {
     required Widget icon,
     required TextStyle titleStyle,
     required TextStyle valueStyle,
-    Color backgroundColor = const Color.fromARGB(77, 57, 56, 82),
+    Color backgroundColor = Colors.white,
   }) {
     return Container(
+      height: 80,
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: backgroundColor,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
+        boxShadow: const [
           BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3)),
         ],
       ),

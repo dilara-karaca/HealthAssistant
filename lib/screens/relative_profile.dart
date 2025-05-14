@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/services.dart';
 
-class PatientsProfile extends StatefulWidget {
+class RelativeProfile extends StatefulWidget {
   @override
-  _PatientsProfileState createState() => _PatientsProfileState();
+  _RelativeProfileState createState() => _RelativeProfileState();
 }
 
-class _PatientsProfileState extends State<PatientsProfile> {
+class _RelativeProfileState extends State<RelativeProfile> {
   bool isEditing = false;
   bool isLoading = true;
 
@@ -32,7 +33,7 @@ class _PatientsProfileState extends State<PatientsProfile> {
 
       final doc =
           await FirebaseFirestore.instance
-              .collection('patients')
+              .collection('relatives')
               .doc(uid)
               .get();
       if (doc.exists) {
@@ -79,35 +80,84 @@ class _PatientsProfileState extends State<PatientsProfile> {
         ),
         iconTheme: const IconThemeData(color: Colors.black),
       ),
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: Image.asset('images/arka_plan.png', fit: BoxFit.cover),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('images/arka_plan.png'),
+            fit: BoxFit.cover,
           ),
-          isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(
-                  16,
-                  kToolbarHeight + 32,
-                  16,
-                  16,
-                ),
-                child: Column(
-                  children: [
-                    _buildEditableTile("Ad Soyad", nameController, nameFocus),
-                    _buildEditableTile(
-                      "Telefon Numarası",
-                      phoneController,
-                      phoneFocus,
+        ),
+        child:
+            isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : SafeArea(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(16, 32, 16, 16),
+                    child: Column(
+                      children: [
+                        _buildEditableTile(
+                          "Ad Soyad",
+                          nameController,
+                          nameFocus,
+                        ),
+                        _buildEditableTile(
+                          "Telefon Numarası",
+                          phoneController,
+                          phoneFocus,
+                        ),
+                        _buildEditableTile(
+                          "Email",
+                          emailController,
+                          emailFocus,
+                        ),
+                      ],
                     ),
-                    _buildEditableTile("Email", emailController, emailFocus),
-                  ],
+                  ),
                 ),
-              ),
-        ],
       ),
     );
+  }
+
+  Future<void> saveSingleField(String label, String newValue) async {
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) return;
+
+      String field = "";
+      String value = newValue.trim();
+
+      if (label == "Ad Soyad") {
+        final names = value.split(' ');
+        final name = names.first;
+        final surname = names.length > 1 ? names.sublist(1).join(' ') : '';
+        await FirebaseFirestore.instance
+            .collection('relatives')
+            .doc(uid)
+            .update({'name': name, 'surname': surname});
+      } else if (label == "Telefon Numarası") {
+        await FirebaseFirestore.instance
+            .collection('relatives')
+            .doc(uid)
+            .update({'phone': value});
+      } else if (label == "Email") {
+        await FirebaseFirestore.instance
+            .collection('relatives')
+            .doc(uid)
+            .update({'email': value});
+      }
+
+      setState(() => isEditing = false);
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Değişiklik kaydedildi.')));
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Hata oluştu: $e')));
+    }
   }
 
   Widget _buildEditableTile(
@@ -115,6 +165,9 @@ class _PatientsProfileState extends State<PatientsProfile> {
     TextEditingController controller,
     FocusNode focusNode,
   ) {
+    final isPhoneField = label == "Telefon Numarası";
+    final isEmailField = label == "Email";
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -144,11 +197,28 @@ class _PatientsProfileState extends State<PatientsProfile> {
                   controller: controller,
                   focusNode: focusNode,
                   enabled: isEditing,
-                  decoration: const InputDecoration.collapsed(hintText: ""),
+                  keyboardType:
+                      isPhoneField
+                          ? TextInputType.number
+                          : isEmailField
+                          ? TextInputType.emailAddress
+                          : TextInputType.text,
+                  inputFormatters:
+                      isPhoneField
+                          ? [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(10),
+                          ]
+                          : null,
+                  decoration: InputDecoration.collapsed(
+                    hintText: "",
+                  ).copyWith(prefixText: isPhoneField ? '+90 ' : null),
                   style: const TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w500,
                   ),
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => saveSingleField(label, controller.text),
                 ),
               ],
             ),

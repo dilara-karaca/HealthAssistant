@@ -14,11 +14,11 @@ import 'screens/forgot_password_screen.dart';
 import 'screens/forgot_password_verify_screen.dart';
 import 'screens/forgot_password_reset_screen.dart';
 import 'screens/emergency.dart';
-import 'screens/patients_home_page.dart';
-import 'screens/patients_settings.dart';
-import 'screens/patients_profile.dart';
-import 'screens/patients_security.dart';
-import 'screens/patients_help.dart';
+import 'screens/relative_home_page.dart';
+import 'screens/relative_settings.dart';
+import 'screens/relative_profile.dart';
+import 'screens/relative_security.dart';
+import 'screens/relative_help.dart';
 import 'screens/home_page.dart';
 import 'screens/settings.dart' as general_settings;
 
@@ -50,13 +50,13 @@ class KronikHastaTakipApp extends StatelessWidget {
         '/forgotPassword': (context) => const ForgotPasswordScreen(),
         '/forgotVerify': (context) => ForgotVerifyScreen(),
         '/resetPassword': (context) => const ForgotResetScreen(),
-        '/home': (context) => const AltNavigasyon(),
-        '/relativeHome': (context) => PatientHomePage(),
+        '/patientHome': (context) => const AltNavigasyon(),
         '/patientsSettings': (context) => PatientsSettings(),
-        '/patientsProfile': (context) => PatientsProfile(),
-        '/patientsSecurity': (context) => const PatientsSecurity(),
-        '/patientsHelp': (context) => const PatientsHelp(),
+        '/relativeProfile': (context) => RelativeProfile(),
+        '/patientsSecurity': (context) => const RelativeSecurity(),
+        '/patientsHelp': (context) => const RelativeHelp(),
         '/redirectAfterLogin': (context) => const RedirectAfterLogin(),
+        '/relativeHome': (context) => RelativeHomePage(),
       },
     );
   }
