@@ -230,7 +230,7 @@ class RelativeHomePageState extends State<RelativeHomePage> {
               buildInfoCard(
                 title: 'Stres Seviyesi',
                 value: 'Düşük',
-                icon: Image.asset('images/stres.png', width: 42, height: 42),
+                icon: Image.asset('images/stressed.png', width: 42, height: 42),
                 titleStyle: titleStyle,
                 valueStyle: valueStyle,
               ),
