@@ -8,18 +8,6 @@ class RelativeHomePage extends StatefulWidget {
 }
 
 class RelativeHomePageState extends State<RelativeHomePage> {
-  final TextStyle titleStyle = const TextStyle(
-    fontSize: 24,
-    fontWeight: FontWeight.w600,
-    color: Colors.black,
-  );
-
-  final TextStyle valueStyle = const TextStyle(
-    fontSize: 30,
-    fontWeight: FontWeight.w900,
-    color: Colors.black,
-  );
-
   String? patientName;
   String? relativeName;
   bool isLoading = true;
@@ -146,10 +134,23 @@ class RelativeHomePageState extends State<RelativeHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
     final displayName =
         isLoading || patientName == null
             ? null
             : "${getPossessiveSuffix(patientName!.split(' ').first)}";
+
+    final TextStyle dynamicTitleStyle = TextStyle(
+      fontSize: screenWidth * 0.045, // örnek: ~16-18px
+      fontWeight: FontWeight.w600,
+      color: Colors.black,
+    );
+
+    final TextStyle dynamicValueStyle = TextStyle(
+      fontSize: screenWidth * 0.065, // örnek: ~24-28px
+      fontWeight: FontWeight.w900,
+      color: Colors.black,
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -158,8 +159,8 @@ class RelativeHomePageState extends State<RelativeHomePage> {
           alignment: Alignment.centerLeft,
           child: Text(
             isLoading ? "Merhaba" : "Merhaba ${relativeName ?? ''}",
-            style: const TextStyle(
-              fontSize: 28,
+            style: TextStyle(
+              fontSize: screenWidth * 0.065,
               color: Colors.black,
               fontWeight: FontWeight.w500,
             ),
@@ -193,8 +194,8 @@ class RelativeHomePageState extends State<RelativeHomePage> {
                   ? const CircularProgressIndicator()
                   : Text(
                     "$displayName Verileri",
-                    style: const TextStyle(
-                      fontSize: 26,
+                    style: TextStyle(
+                      fontSize: screenWidth * 0.06,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -203,36 +204,36 @@ class RelativeHomePageState extends State<RelativeHomePage> {
                 title: 'Kalp Atışı',
                 value: '67 bpm',
                 icon: Image.asset('images/kalp.png', width: 42, height: 42),
-                titleStyle: titleStyle,
-                valueStyle: valueStyle,
+                titleStyle: dynamicTitleStyle,
+                valueStyle: dynamicValueStyle,
               ),
               buildInfoCard(
                 title: 'Tansiyon',
                 value: '126/70',
                 icon: Image.asset('images/tansiyon.png', width: 42, height: 42),
-                titleStyle: titleStyle,
-                valueStyle: valueStyle,
+                titleStyle: dynamicTitleStyle,
+                valueStyle: dynamicValueStyle,
               ),
               buildInfoCard(
                 title: 'Vücut Sıcaklığı',
                 value: '37°C',
                 icon: Image.asset('images/sicaklik.png', width: 42, height: 42),
-                titleStyle: titleStyle,
-                valueStyle: valueStyle,
+                titleStyle: dynamicTitleStyle,
+                valueStyle: dynamicValueStyle,
               ),
               buildInfoCard(
                 title: 'Kan Oksijen',
                 value: '96 %',
                 icon: Image.asset('images/kan.png', width: 42, height: 42),
-                titleStyle: titleStyle,
-                valueStyle: valueStyle,
+                titleStyle: dynamicTitleStyle,
+                valueStyle: dynamicValueStyle,
               ),
               buildInfoCard(
                 title: 'Stres Seviyesi',
                 value: 'Düşük',
                 icon: Image.asset('images/stressed.png', width: 42, height: 42),
-                titleStyle: titleStyle,
-                valueStyle: valueStyle,
+                titleStyle: dynamicTitleStyle,
+                valueStyle: dynamicValueStyle,
               ),
             ],
           ),
