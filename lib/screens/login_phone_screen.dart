@@ -56,6 +56,8 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -79,22 +81,19 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> {
           SafeArea(
             child: SingleChildScrollView(
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24.0,
-                  vertical: 20,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    const SizedBox(height: 10),
+                    SizedBox(height: screenHeight * 0.02),
                     const Text(
-                      'Kronik Hasta Takip',
+                      'Sens-AI',
                       style: TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 350),
+                    SizedBox(height: screenHeight * 0.25),
                     Container(
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
@@ -130,7 +129,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> {
                             onTap: _verifyPhoneNumber,
                             child: Container(
                               width: double.infinity,
-                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFCDE7DA),
                                 borderRadius: BorderRadius.circular(12),
@@ -175,6 +174,7 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> {
                         ],
                       ),
                     ),
+                    SizedBox(height: screenHeight * 0.05),
                   ],
                 ),
               ),

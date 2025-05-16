@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'maps.dart';
-import 'relative_security.dart';
-import 'relative_settings.dart';
 
 class RelativeHomePage extends StatefulWidget {
   @override
@@ -24,6 +21,7 @@ class RelativeHomePageState extends State<RelativeHomePage> {
   );
 
   String? patientName;
+  String? relativeName;
   bool isLoading = true;
 
   @override
@@ -33,27 +31,6 @@ class RelativeHomePageState extends State<RelativeHomePage> {
   }
 
   String getPossessiveSuffix(String name) {
-    final lowerName = name.toLowerCase();
-    final vowels = ['a', 'e', 'ı', 'i', 'o', 'ö', 'u', 'ü'];
-    final lastVowel = lowerName
-        .split('')
-        .lastWhere((c) => vowels.contains(c), orElse: () => 'a');
-
-    String suffix;
-    if (['a', 'ı'].contains(lastVowel)) {
-      suffix = "'ın";
-    } else if (['e', 'i'].contains(lastVowel)) {
-      suffix = "'in";
-    } else if (['o', 'u'].contains(lastVowel)) {
-      suffix = "'un";
-    } else {
-      suffix = "'ün";
-    }
-
-    return "$name$suffix";
-  }
-
-  String addPossessiveSuffix(String name) {
     if (name.isEmpty) return "Hasta'nın";
 
     final vowels = 'aeıioöuü';
@@ -101,6 +78,7 @@ class RelativeHomePageState extends State<RelativeHomePage> {
               .doc(uid)
               .get();
 
+      final relativeNameFromDb = relativeDoc.data()?['name'];
       final linkedPatientId = relativeDoc.data()?['linkedPatient'];
       if (linkedPatientId == null) return;
 
@@ -110,13 +88,15 @@ class RelativeHomePageState extends State<RelativeHomePage> {
               .doc(linkedPatientId)
               .get();
 
-      final name = patientDoc.data()?['name'];
+      final patientNameFromDb = patientDoc.data()?['name'];
+
       setState(() {
-        patientName = name ?? "Hasta";
+        relativeName = relativeNameFromDb ?? "Kullanıcı";
+        patientName = patientNameFromDb ?? "Hasta";
         isLoading = false;
       });
     } catch (e) {
-      print("Hasta adı alınamadı: $e");
+      print("Hasta veya yakını adı alınamadı: $e");
       setState(() => isLoading = false);
     }
   }
@@ -174,11 +154,11 @@ class RelativeHomePageState extends State<RelativeHomePage> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
-        title: const Align(
+        title: Align(
           alignment: Alignment.centerLeft,
           child: Text(
-            'Merhaba',
-            style: TextStyle(
+            isLoading ? "Merhaba" : "Merhaba ${relativeName ?? ''}",
+            style: const TextStyle(
               fontSize: 28,
               color: Colors.black,
               fontWeight: FontWeight.w500,
@@ -227,6 +207,13 @@ class RelativeHomePageState extends State<RelativeHomePage> {
                 valueStyle: valueStyle,
               ),
               buildInfoCard(
+                title: 'Tansiyon',
+                value: '126/70',
+                icon: Image.asset('images/tansiyon.png', width: 42, height: 42),
+                titleStyle: titleStyle,
+                valueStyle: valueStyle,
+              ),
+              buildInfoCard(
                 title: 'Vücut Sıcaklığı',
                 value: '37°C',
                 icon: Image.asset('images/sicaklik.png', width: 42, height: 42),
@@ -249,50 +236,6 @@ class RelativeHomePageState extends State<RelativeHomePage> {
               ),
             ],
           ),
-        ),
-      ),
-      bottomNavigationBar: BottomAppBar(
-        color: const Color(0xFF18202B),
-        shape: const CircularNotchedRectangle(),
-        notchMargin: 6.0,
-        child: Container(
-          height: 70,
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.home, size: 40, color: Colors.white),
-                onPressed: () {},
-              ),
-              const SizedBox(width: 30),
-              IconButton(
-                icon: const Icon(Icons.settings, size: 40, color: Colors.white),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => PatientsSettings()),
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      floatingActionButton: SizedBox(
-        width: 80,
-        height: 80,
-        child: FloatingActionButton(
-          backgroundColor: Colors.red,
-          shape: const CircleBorder(),
-          child: const Icon(Icons.location_on, color: Colors.white, size: 36),
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => HaritaPage()),
-            );
-          },
         ),
       ),
     );

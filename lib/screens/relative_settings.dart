@@ -1,11 +1,13 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kronik_hasta_takip/screens/login_email_screen.dart';
 import 'package:kronik_hasta_takip/screens/relative_profile.dart';
 import 'relative_help.dart';
-import 'relative_security.dart' show RelativeSecurity;
+import 'relative_security.dart';
 
-class PatientsSettings extends StatelessWidget {
+class RelativeSettings extends StatelessWidget {
+  const RelativeSettings({super.key});
+
   final double titleFontSize = 20;
 
   @override
@@ -13,16 +15,14 @@ class PatientsSettings extends StatelessWidget {
     return Stack(
       children: [
         Positioned.fill(
-          child: Image.asset(
-            'images/arka_plan.png', // Asset yolunu kontrol et
-            fit: BoxFit.cover,
-          ),
+          child: Image.asset('images/arka_plan.png', fit: BoxFit.cover),
         ),
         Scaffold(
           backgroundColor: Colors.transparent,
           appBar: AppBar(
             backgroundColor: Colors.transparent,
             elevation: 0,
+            centerTitle: true,
             title: const Text(
               "Ayarlar",
               style: TextStyle(
@@ -31,7 +31,7 @@ class PatientsSettings extends StatelessWidget {
                 color: Colors.black87,
               ),
             ),
-            centerTitle: true,
+            automaticallyImplyLeading: false, // ← Geri tuşu gizlenir
           ),
           body: SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
@@ -44,11 +44,8 @@ class PatientsSettings extends StatelessWidget {
                   onTap:
                       () => Navigator.push(
                         context,
-                        MaterialPageRoute(
-                          builder: (context) => RelativeProfile(),
-                        ),
+                        MaterialPageRoute(builder: (_) => RelativeProfile()),
                       ),
-                  fontSize: titleFontSize,
                 ),
                 _buildSettingsTile(
                   context,
@@ -58,10 +55,9 @@ class PatientsSettings extends StatelessWidget {
                       () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => RelativeSecurity(),
+                          builder: (_) => const RelativeSecurity(),
                         ),
                       ),
-                  fontSize: titleFontSize,
                 ),
                 _buildSettingsTile(
                   context,
@@ -70,60 +66,45 @@ class PatientsSettings extends StatelessWidget {
                   onTap:
                       () => Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => RelativeHelp()),
+                        MaterialPageRoute(builder: (_) => const RelativeHelp()),
                       ),
-                  fontSize: titleFontSize,
                 ),
                 _buildSettingsTile(
                   context,
                   title: "Çıkış Yap",
                   icon: Icons.logout,
                   onTap: () async {
-                    final shouldLogout = await showDialog<bool>(
+                    final confirm = await showDialog<bool>(
                       context: context,
                       builder:
-                          (context) => AlertDialog(
-                            title: const Text(
-                              "Çıkış Yap",
-                              style: TextStyle(fontWeight: FontWeight.w600),
-                            ),
+                          (_) => AlertDialog(
+                            title: const Text("Çıkış Yap"),
                             content: const Text(
-                              "Çıkış yapmak istediğinize emin misiniz?",
-                              style: TextStyle(fontSize: 19),
+                              "Çıkmak istediğinize emin misiniz?",
                             ),
                             actions: [
                               TextButton(
-                                onPressed:
-                                    () => Navigator.of(context).pop(false),
-                                child: const Text(
-                                  "Hayır",
-                                  style: TextStyle(fontSize: 20),
-                                ),
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text("Hayır"),
                               ),
                               TextButton(
-                                onPressed:
-                                    () => Navigator.of(context).pop(true),
-                                child: const Text(
-                                  "Evet",
-                                  style: TextStyle(fontSize: 20),
-                                ),
+                                onPressed: () => Navigator.pop(context, true),
+                                child: const Text("Evet"),
                               ),
                             ],
                           ),
                     );
-
-                    if (shouldLogout == true) {
+                    if (confirm == true) {
                       await FirebaseAuth.instance.signOut();
                       Navigator.pushAndRemoveUntil(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const LoginEmailScreen(),
+                          builder: (_) => const LoginEmailScreen(),
                         ),
-                        (route) => false,
+                        (_) => false,
                       );
                     }
                   },
-                  fontSize: titleFontSize,
                 ),
               ],
             ),
@@ -138,19 +119,14 @@ class PatientsSettings extends StatelessWidget {
     required String title,
     required IconData icon,
     required VoidCallback onTap,
-    double fontSize = 18,
   }) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.85),
+        color: Colors.white.withOpacity(0.9),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
+        boxShadow: const [
+          BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3)),
         ],
       ),
       child: ListTile(
@@ -161,7 +137,7 @@ class PatientsSettings extends StatelessWidget {
         leading: Icon(icon, size: 28, color: Colors.grey[700]),
         title: Text(
           title,
-          style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w600),
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
         onTap: onTap,

@@ -8,6 +8,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'screens/login_email_screen.dart';
 import 'screens/login_phone_screen.dart';
 import 'screens/login_sms_screen.dart';
+import 'screens/maps.dart';
 import 'screens/register_patient_screen.dart';
 import 'screens/register_relative_screen.dart';
 import 'screens/forgot_password_screen.dart';
@@ -21,6 +22,7 @@ import 'screens/relative_security.dart';
 import 'screens/relative_help.dart';
 import 'screens/home_page.dart';
 import 'screens/settings.dart' as general_settings;
+import 'screens/chat_bot.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -51,12 +53,11 @@ class KronikHastaTakipApp extends StatelessWidget {
         '/forgotVerify': (context) => ForgotVerifyScreen(),
         '/resetPassword': (context) => const ForgotResetScreen(),
         '/patientHome': (context) => const AltNavigasyon(),
-        '/patientsSettings': (context) => PatientsSettings(),
         '/relativeProfile': (context) => RelativeProfile(),
         '/patientsSecurity': (context) => const RelativeSecurity(),
         '/patientsHelp': (context) => const RelativeHelp(),
-        '/redirectAfterLogin': (context) => const RedirectAfterLogin(),
-        '/relativeHome': (context) => RelativeHomePage(),
+        '/redirectAfterLogin': (context) => RedirectAfterLogin(),
+        '/relativeHome': (context) => RelativeNavigasyon(),
       },
     );
   }
@@ -99,9 +100,21 @@ class RedirectAfterLogin extends StatelessWidget {
           final role = snapshot.data;
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (role == 'patient') {
-              Navigator.pushReplacementNamed(context, '/home');
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const AltNavigasyon(), // hasta ekranı
+                ),
+              );
             } else if (role == 'relative') {
-              Navigator.pushReplacementNamed(context, '/relativeHome');
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder:
+                      (context) =>
+                          const RelativeNavigasyon(), // ✅ hasta yakını menü barlı ekran
+                ),
+              );
             } else {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text("Geçersiz kullanıcı rolü.")),
@@ -117,6 +130,72 @@ class RedirectAfterLogin extends StatelessWidget {
         }
         return const SizedBox(); // boş widget
       },
+    );
+  }
+}
+
+class RelativeNavigasyon extends StatefulWidget {
+  const RelativeNavigasyon({super.key});
+
+  @override
+  State<RelativeNavigasyon> createState() => _RelativeNavigasyonState();
+}
+
+class _RelativeNavigasyonState extends State<RelativeNavigasyon> {
+  int _seciliIndex = 0;
+
+  final List<Widget> _sayfalar = [RelativeHomePage(), RelativeSettings()];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: _sayfalar[_seciliIndex],
+      floatingActionButton: SizedBox(
+        width: 80,
+        height: 80,
+        child: FloatingActionButton(
+          backgroundColor: Colors.red,
+          shape: const CircleBorder(),
+          child: const Icon(Icons.location_on, size: 36, color: Colors.white),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => HaritaPage()),
+            );
+          },
+        ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      bottomNavigationBar: BottomAppBar(
+        color: const Color(0xFF18202B),
+        shape: const CircularNotchedRectangle(),
+        notchMargin: 6,
+        child: SizedBox(
+          height: 60,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              IconButton(
+                icon: Icon(
+                  Icons.home,
+                  size: 45,
+                  color: _seciliIndex == 0 ? Colors.white : Colors.grey,
+                ),
+                onPressed: () => setState(() => _seciliIndex = 0),
+              ),
+              const SizedBox(width: 40),
+              IconButton(
+                icon: Icon(
+                  Icons.settings,
+                  size: 45,
+                  color: _seciliIndex == 1 ? Colors.red : Colors.white,
+                ),
+                onPressed: () => setState(() => _seciliIndex = 1),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

@@ -3,6 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kronik_hasta_takip/screens/line_chart_sample.dart';
 
+import 'chat_bot.dart';
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -44,6 +46,7 @@ class _HomePageState extends State<HomePage> {
               : Stack(
                 children: [
                   Container(
+                    height: MediaQuery.of(context).size.height,
                     decoration: const BoxDecoration(
                       image: DecorationImage(
                         image: AssetImage("images/arka_plan.png"),
@@ -630,14 +633,17 @@ class _HomePageState extends State<HomePage> {
   Widget _buildChatBotButton() {
     return GestureDetector(
       onTap: () {
-        // Henüz işlem yok
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const ChatBotScreen()),
+        );
       },
       child: Container(
-        width: 60,
-        height: 60,
+        width: 70,
+        height: 70,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: const Color.fromARGB(255, 5, 153, 138),
+          color: Colors.white,
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.3),
@@ -646,7 +652,14 @@ class _HomePageState extends State<HomePage> {
             ),
           ],
         ),
-        child: const Icon(Icons.chat, color: Colors.white, size: 30),
+        child: Center(
+          child: Image.asset(
+            'images/chat_bot.png',
+            width: 80,
+            height: 80,
+            fit: BoxFit.contain,
+          ),
+        ),
       ),
     );
   }

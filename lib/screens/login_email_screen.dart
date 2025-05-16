@@ -91,10 +91,10 @@ class _LoginEmailScreenState extends State<LoginEmailScreen> {
                 children: [
                   const SizedBox(height: 20),
                   const Text(
-                    'Kronik Hasta Takip',
+                    'Sens-AI',
                     style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 40,
+                      fontWeight: FontWeight.w900,
                       color: Colors.black,
                     ),
                   ),
@@ -159,7 +159,7 @@ class _LoginEmailScreenState extends State<LoginEmailScreen> {
                 ),
               ),
               child: const Text(
-                'E-MAİL',
+                'E-mail',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 18,
