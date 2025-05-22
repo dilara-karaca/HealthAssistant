@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class LoginPhoneScreen extends StatefulWidget {
   const LoginPhoneScreen({super.key});
@@ -9,67 +10,63 @@ class LoginPhoneScreen extends StatefulWidget {
 }
 
 class _LoginPhoneScreenState extends State<LoginPhoneScreen> {
-  final TextEditingController phoneController = TextEditingController();
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final TextEditingController phoneController = TextEditingController(text: "+90");
+  final TextEditingController passwordController = TextEditingController();
+  bool obscurePassword = true;
 
-  String verificationId = '';
+  Future<void> loginWithPhone() async {
+    final phone = phoneController.text.trim();
+    final password = passwordController.text.trim();
 
-  Future<void> _verifyPhoneNumber() async {
-    final phoneNumber = phoneController.text.trim();
-
-    if (phoneNumber.isEmpty) {
+    if (phone.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Telefon numarası boş olamaz")),
+        const SnackBar(content: Text("Telefon numarası ve şifre boş olamaz.")),
       );
       return;
     }
 
     try {
-      await _auth.verifyPhoneNumber(
-        phoneNumber: phoneNumber,
-        timeout: const Duration(seconds: 60),
-        verificationCompleted: (PhoneAuthCredential credential) async {
-          await _auth.signInWithCredential(credential);
-          Navigator.pushReplacementNamed(context, '/home');
-        },
-        verificationFailed: (FirebaseAuthException e) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Doğrulama başarısız: ${e.message}")),
-          );
-        },
-        codeSent: (String verId, int? resendToken) {
-          setState(() {
-            verificationId = verId;
-          });
-          Navigator.pushNamed(context, '/loginSms', arguments: verificationId);
-        },
-        codeAutoRetrievalTimeout: (String verId) {
-          verificationId = verId;
-        },
+      final userCredential = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(email: phone, password: password);
+      final uid = userCredential.user!.uid;
+
+      final patientDoc = await FirebaseFirestore.instance
+          .collection('patients')
+          .doc(uid)
+          .get();
+
+      if (patientDoc.exists) {
+        Navigator.pushReplacementNamed(context, '/patientHome');
+        return;
+      }
+
+      final relativeDoc = await FirebaseFirestore.instance
+          .collection('relatives')
+          .doc(uid)
+          .get();
+
+      if (relativeDoc.exists) {
+        Navigator.pushReplacementNamed(context, '/relativeHome');
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Kullanıcı rolü belirlenemedi.")),
+      );
+    } on FirebaseAuthException catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Giriş hatası: ${e.message}")),
       );
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Hata: ${e.toString()}")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Hata: $e")),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
-      ),
-      extendBodyBehindAppBar: true,
       body: Stack(
         children: [
           Positioned.fill(
@@ -80,107 +77,197 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> {
           ),
           SafeArea(
             child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    SizedBox(height: screenHeight * 0.02),
-                    const Text(
-                      'Sens-AI',
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                      ),
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Sens-AI',
+                    style: TextStyle(
+                      fontSize: 40,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.black,
                     ),
-                    SizedBox(height: screenHeight * 0.25),
-                    Container(
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        image: const DecorationImage(
-                          image: AssetImage('images/yesil_rectangle.png'),
-                          fit: BoxFit.cover,
-                          alignment: Alignment.bottomCenter,
+                  ),
+                  const SizedBox(height: 280),
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      image: const DecorationImage(
+                        image: AssetImage('images/koyu_rectangle.png'),
+                        fit: BoxFit.fitWidth,
+                      ),
+                      borderRadius: BorderRadius.circular(32),
+                    ),
+                    child: Column(
+                      children: [
+                        _buildSwitchTabs(context),
+                        const SizedBox(height: 28),
+                        _buildPhoneField(),
+                        const SizedBox(height: 20),
+                        _buildPasswordField(),
+                        const SizedBox(height: 28),
+                        _buildLoginButton(),
+                        const SizedBox(height: 20),
+                        _buildForgotPassword(context),
+                        const SizedBox(height: 16),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.pushNamed(context, '/registerPatient');
+                          },
+                          child: Image.asset('images/frame_60.png'),
                         ),
-                        borderRadius: BorderRadius.circular(32),
-                      ),
-                      child: Column(
-                        children: [
-                          TextField(
-                            controller: phoneController,
-                            keyboardType: TextInputType.phone,
-                            decoration: InputDecoration(
-                              filled: true,
-                              fillColor: Colors.white,
-                              hintText: '+90 Telefon Numarası',
-                              hintStyle: const TextStyle(fontSize: 18),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 18,
-                                vertical: 20,
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide.none,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 28),
-                          GestureDetector(
-                            onTap: _verifyPhoneNumber,
-                            child: Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFCDE7DA),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: Colors.black,
-                                  width: 1.5,
-                                ),
-                              ),
-                              child: const Center(
-                                child: Text(
-                                  'Giriş Yap',
-                                  style: TextStyle(
-                                    color: Colors.black,
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          TextButton(
-                            onPressed: () {
-                              Navigator.pushNamed(context, '/forgotPassword');
-                            },
-                            child: const Text(
-                              'Şifremi Unuttum',
-                              style: TextStyle(
-                                color: Colors.grey,
-                                decoration: TextDecoration.underline,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          GestureDetector(
-                            onTap: () {
-                              Navigator.pushNamed(context, '/registerPatient');
-                            },
-                            child: Image.asset('images/frame_60.png'),
-                          ),
-                        ],
-                      ),
+                      ],
                     ),
-                    SizedBox(height: screenHeight * 0.05),
-                  ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSwitchTabs(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextButton(
+              onPressed: () {
+                Navigator.pushReplacementNamed(context, '/loginEmail');
+              },
+              style: TextButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    bottomLeft: Radius.circular(24),
+                  ),
+                ),
+              ),
+              child: const Text(
+                'E-mail',
+                style: TextStyle(
+                  color: Colors.black87,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: TextButton(
+              onPressed: () {},
+              style: TextButton.styleFrom(
+                backgroundColor: Colors.black87,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.only(
+                    topRight: Radius.circular(24),
+                    bottomRight: Radius.circular(24),
+                  ),
+                ),
+              ),
+              child: const Text(
+                'Telefon No',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPhoneField() {
+    return TextField(
+      controller: phoneController,
+      keyboardType: TextInputType.phone,
+      decoration: InputDecoration(
+        filled: true,
+        fillColor: Colors.white,
+        hintText: 'Telefon Numarası (+90)',
+        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPasswordField() {
+    return TextField(
+      controller: passwordController,
+      obscureText: obscurePassword,
+      decoration: InputDecoration(
+        filled: true,
+        fillColor: Colors.white,
+        hintText: 'Şifre',
+        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
+        suffixIcon: IconButton(
+          icon: Icon(obscurePassword ? Icons.visibility_off : Icons.visibility),
+          onPressed: () {
+            setState(() {
+              obscurePassword = !obscurePassword;
+            });
+          },
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoginButton() {
+    return GestureDetector(
+      onTap: loginWithPhone,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFCDE7DA),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.black, width: 2),
+        ),
+        child: const Center(
+          child: Text(
+            'Giriş Yap',
+            style: TextStyle(
+              color: Colors.black,
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildForgotPassword(BuildContext context) {
+    return TextButton(
+      onPressed: () {
+        Navigator.pushNamed(context, '/forgotPassword');
+      },
+      child: const Text(
+        'Şifremi Unuttum',
+        style: TextStyle(
+          color: Colors.grey,
+          decoration: TextDecoration.underline,
+          fontSize: 16,
+        ),
       ),
     );
   }

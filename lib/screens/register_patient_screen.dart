@@ -134,7 +134,24 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
         buildInputField(label: 'Ad', controller: nameController),
         buildInputField(label: 'Soyad', controller: surnameController),
         buildInputField(label: 'E-posta', controller: emailController),
-        buildInputField(label: 'Telefon Numarası', controller: phoneController),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12.0),
+          child: TextField(
+            controller: phoneController,
+            keyboardType: TextInputType.phone,
+            decoration: InputDecoration(
+              labelText: 'Telefon Numarası',
+              prefixText: '+90 ',
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+        ),
+
         buildInputField(
           label: 'Şifre',
           controller: passwordController,
@@ -349,7 +366,7 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
         'name': name,
         'surname': surname,
         'email': email,
-        'phone': phone,
+        'phone': '+90$phone',
         'weight': weight,
         'height': height,
         'gender': selectedGender,
