@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class Emergency extends StatefulWidget {
   const Emergency({Key? key}) : super(key: key);
@@ -10,7 +11,7 @@ class Emergency extends StatefulWidget {
 }
 
 class _EmergencyState extends State<Emergency> {
-  List<Map<String, String>> relatives = [];
+  List<Map<String, dynamic>> relatives = [];
 
   @override
   void initState() {
@@ -22,25 +23,35 @@ class _EmergencyState extends State<Emergency> {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
 
-    final snapshot =
-        await FirebaseFirestore.instance
-            .collection('relatives')
-            .where('linkedPatient', isEqualTo: uid)
-            .get();
+    final snapshot = await FirebaseFirestore.instance
+        .collection('relatives')
+        .where('linkedPatient', isEqualTo: uid)
+        .get();
 
     setState(() {
-      relatives =
-          snapshot.docs.map((doc) {
-            final Map<String, dynamic> data =
-                doc.data() as Map<String, dynamic>;
-            return {
-              'uid': data['uid'] as String? ?? '',
-              'name':
-                  '${data['name'] as String? ?? ''} ${data['surname'] as String? ?? ''}',
-            };
-          }).toList();
+      relatives = snapshot.docs.map((doc) {
+        final data = doc.data();
+        return {
+          'uid': data['uid'] ?? '',
+          'name': '${data['name'] ?? ''} ${data['surname'] ?? ''}',
+          'phone': data['phone'] ?? '',
+        };
+      }).toList();
     });
   }
+
+  Future<void> callRelative(String phoneNumber) async {
+    final Uri phoneUri = Uri(scheme: 'tel', path: phoneNumber);
+    if (await canLaunchUrl(phoneUri)) {
+      await launchUrl(phoneUri);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Arama başlatılamadı.")),
+      );
+    }
+  }
+
+
 
   Future<void> sendEmergencyNotification(String relativeUid) async {
     await FirebaseFirestore.instance.collection('notifications').add({
@@ -49,9 +60,9 @@ class _EmergencyState extends State<Emergency> {
       'timestamp': Timestamp.now(),
     });
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text("Bildirim gönderildi.")));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Bildirim gönderildi.")),
+    );
   }
 
   @override
@@ -129,40 +140,64 @@ class _EmergencyState extends State<Emergency> {
                 ),
                 const SizedBox(height: 12),
                 ...relatives.map(
-                  (contact) => Container(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    decoration: BoxDecoration(
-                      color: const Color(0x4D5150B2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: ListTile(
-                      leading: const Icon(Icons.person),
-                      title: Text(
-                        contact['name'] ?? '',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      trailing: IconButton(
-                        icon: const Icon(
-                          Icons.notification_important,
-                          color: Colors.red,
+                      (contact) =>
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        decoration: BoxDecoration(
+                          color: const Color(0x4D5150B2),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        onPressed: () {
-                          sendEmergencyNotification(contact['uid'] ?? '');
-                        },
+                        child: ListTile(
+                          leading: const Icon(Icons.person),
+                          title: Text(
+                            contact['name'] ?? '',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          trailing: IconButton(
+                            icon: const Icon(
+                              Icons.notification_important,
+                              color: Colors.red,
+                            ),
+                            onPressed: () {
+                              showModalBottomSheet(
+                                context: context,
+                                shape: const RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.vertical(
+                                      top: Radius.circular(20)),
+                                ),
+                                  builder: (BuildContext context) {
+                                    return Wrap(
+                                      children: [
+                                        ListTile(
+                                          leading: const Icon(Icons.notification_important, color: Colors.red),
+                                          title: const Text("Bildirim Gönder"),
+                                          onTap: () {
+                                            Navigator.pop(context);
+                                            sendEmergencyNotification(contact['uid'] ?? '');
+                                          },
+                                        ),
+                                        ListTile(
+                                          leading: const Icon(Icons.phone, color: Colors.green),
+                                          title: const Text("Telefonla Ara"),
+                                          onTap: () {
+                                            Navigator.pop(context);
+                                            callRelative(contact['phone'] ?? '');
+                                          },
+                                        ),
+                                      ],
+                                    );
+                                  }
+
+                              );
+                            },
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
                 ),
-                if (relatives.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 8.0),
-                    child: Text("Henüz tanımlı bir hasta yakını yok."),
-                  ),
               ],
             ),
           ),
         ],
       ),
     );
-  }
-}
+  }                   }

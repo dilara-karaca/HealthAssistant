@@ -11,13 +11,34 @@ class RelativeHomePageState extends State<RelativeHomePage> {
   String? patientName;
   String? relativeName;
   bool isLoading = true;
+  int notificationCount = 0;
+  List<Map<String, dynamic>> notifications = [];
 
   @override
   void initState() {
     super.initState();
     fetchPatientName();
+    fetchNotifications();
   }
+  Future<void> fetchNotifications() async {
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) return;
 
+      final snapshot = await FirebaseFirestore.instance
+          .collection('notifications')
+          .where('to', isEqualTo: uid)
+          .orderBy('timestamp', descending: true)
+          .get();
+
+      setState(() {
+        notifications = snapshot.docs.map((doc) => doc.data()).toList();
+        notificationCount = notifications.length;
+      });
+    } catch (e) {
+      print("Bildirimler alınamadı: $e");
+    }
+  }
   String getPossessiveSuffix(String name) {
     if (name.isEmpty) return "Hasta'nın";
 
@@ -27,8 +48,8 @@ class RelativeHomePageState extends State<RelativeHomePage> {
         .reversed
         .firstWhere(
           (char) => vowels.contains(char.toLowerCase()),
-          orElse: () => 'a',
-        );
+      orElse: () => 'a',
+    );
 
     String suffix;
     switch (lastVowel.toLowerCase()) {
@@ -61,20 +82,20 @@ class RelativeHomePageState extends State<RelativeHomePage> {
       if (uid == null) return;
 
       final relativeDoc =
-          await FirebaseFirestore.instance
-              .collection('relatives')
-              .doc(uid)
-              .get();
+      await FirebaseFirestore.instance
+          .collection('relatives')
+          .doc(uid)
+          .get();
 
       final relativeNameFromDb = relativeDoc.data()?['name'];
       final linkedPatientId = relativeDoc.data()?['linkedPatient'];
       if (linkedPatientId == null) return;
 
       final patientDoc =
-          await FirebaseFirestore.instance
-              .collection('patients')
-              .doc(linkedPatientId)
-              .get();
+      await FirebaseFirestore.instance
+          .collection('patients')
+          .doc(linkedPatientId)
+          .get();
 
       final patientNameFromDb = patientDoc.data()?['name'];
 
@@ -96,49 +117,47 @@ class RelativeHomePageState extends State<RelativeHomePage> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder:
-          (context) => Container(
-            width: MediaQuery.of(context).size.width * 0.95,
-            height: 300,
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text(
-                  "Bildirimler",
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: 10),
-                Text(
-                  "Nabız",
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-                ),
-                Text("Nabız seviyeniz normal aralıkta."),
-                Divider(),
-                Text(
-                  "Vücut Sıcaklığı",
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-                ),
-                Text("Vücut sıcaklığınız normal."),
-                Divider(),
-                Text(
-                  "Stres Seviyesi",
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-                ),
-                Text("Stres seviyeniz düşük."),
-              ],
+      builder: (context) => Container(
+        height: 300,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Bildirimler",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-          ),
+            const SizedBox(height: 10),
+            Expanded(
+              child: notifications.isEmpty
+                  ? const Center(child: Text("Bildirim yok"))
+                  : ListView.separated(
+                itemCount: notifications.length,
+                separatorBuilder: (_, __) => const Divider(),
+                itemBuilder: (context, index) {
+                  final notification = notifications[index];
+                  final patient = patientName ?? "Hasta";
+                  return Text(
+                    "$patient size acil durum bildirimi gönderdi.",
+                    style: const TextStyle(fontSize: 16),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
+
 
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final displayName =
-        isLoading || patientName == null
-            ? null
-            : "${getPossessiveSuffix(patientName!.split(' ').first)}";
+    isLoading || patientName == null
+        ? null
+        : "${getPossessiveSuffix(patientName!.split(' ').first)}";
 
     final TextStyle dynamicTitleStyle = TextStyle(
       fontSize: screenWidth * 0.045, // örnek: ~16-18px
@@ -167,11 +186,40 @@ class RelativeHomePageState extends State<RelativeHomePage> {
           ),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications, color: Colors.black),
-            onPressed: _showNotificationsPanel,
+          Stack(
+            alignment: Alignment.topRight,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.notifications, size: 30, color: Colors.black),
+                onPressed: _showNotificationsPanel,
+              ),
+              if (notificationCount > 0)
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
+                    child: Center(
+                      child: Text(
+                        '$notificationCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
         ],
+
         iconTheme: const IconThemeData(color: Colors.black),
         elevation: 1,
       ),
@@ -193,12 +241,12 @@ class RelativeHomePageState extends State<RelativeHomePage> {
               isLoading
                   ? const CircularProgressIndicator()
                   : Text(
-                    "$displayName Verileri",
-                    style: TextStyle(
-                      fontSize: screenWidth * 0.06,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
+                "$displayName Verileri",
+                style: TextStyle(
+                  fontSize: screenWidth * 0.06,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
               const SizedBox(height: 16),
               buildInfoCard(
                 title: 'Kalp Atışı',
