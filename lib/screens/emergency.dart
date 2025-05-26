@@ -23,20 +23,22 @@ class _EmergencyState extends State<Emergency> {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
 
-    final snapshot = await FirebaseFirestore.instance
-        .collection('relatives')
-        .where('linkedPatient', isEqualTo: uid)
-        .get();
+    final snapshot =
+        await FirebaseFirestore.instance
+            .collection('relatives')
+            .where('linkedPatient', isEqualTo: uid)
+            .get();
 
     setState(() {
-      relatives = snapshot.docs.map((doc) {
-        final data = doc.data();
-        return {
-          'uid': data['uid'] ?? '',
-          'name': '${data['name'] ?? ''} ${data['surname'] ?? ''}',
-          'phone': data['phone'] ?? '',
-        };
-      }).toList();
+      relatives =
+          snapshot.docs.map((doc) {
+            final data = doc.data();
+            return {
+              'uid': data['uid'] ?? '',
+              'name': '${data['name'] ?? ''} ${data['surname'] ?? ''}',
+              'phone': data['phone'] ?? '',
+            };
+          }).toList();
     });
   }
 
@@ -45,13 +47,11 @@ class _EmergencyState extends State<Emergency> {
     if (await canLaunchUrl(phoneUri)) {
       await launchUrl(phoneUri);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Arama başlatılamadı.")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Arama başlatılamadı.")));
     }
   }
-
-
 
   Future<void> sendEmergencyNotification(String relativeUid) async {
     await FirebaseFirestore.instance.collection('notifications').add({
@@ -60,9 +60,9 @@ class _EmergencyState extends State<Emergency> {
       'timestamp': Timestamp.now(),
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Bildirim gönderildi.")),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text("Bildirim gönderildi.")));
   }
 
   @override
@@ -102,11 +102,7 @@ class _EmergencyState extends State<Emergency> {
                     ),
                     child: ElevatedButton(
                       onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text("Acil durum için yakın seçiniz."),
-                          ),
-                        );
+                        callRelative("112");
                       },
                       style: ElevatedButton.styleFrom(
                         shape: const CircleBorder(),
@@ -140,59 +136,66 @@ class _EmergencyState extends State<Emergency> {
                 ),
                 const SizedBox(height: 12),
                 ...relatives.map(
-                      (contact) =>
-                      Container(
-                        margin: const EdgeInsets.only(bottom: 10),
-                        decoration: BoxDecoration(
-                          color: const Color(0x4D5150B2),
-                          borderRadius: BorderRadius.circular(12),
+                  (contact) => Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0x4D5150B2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: ListTile(
+                      leading: const Icon(Icons.person),
+                      title: Text(
+                        contact['name'] ?? '',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      trailing: IconButton(
+                        icon: const Icon(
+                          Icons.notification_important,
+                          color: Colors.red,
                         ),
-                        child: ListTile(
-                          leading: const Icon(Icons.person),
-                          title: Text(
-                            contact['name'] ?? '',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          trailing: IconButton(
-                            icon: const Icon(
-                              Icons.notification_important,
-                              color: Colors.red,
+                        onPressed: () {
+                          showModalBottomSheet(
+                            context: context,
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.vertical(
+                                top: Radius.circular(20),
+                              ),
                             ),
-                            onPressed: () {
-                              showModalBottomSheet(
-                                context: context,
-                                shape: const RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.vertical(
-                                      top: Radius.circular(20)),
-                                ),
-                                  builder: (BuildContext context) {
-                                    return Wrap(
-                                      children: [
-                                        ListTile(
-                                          leading: const Icon(Icons.notification_important, color: Colors.red),
-                                          title: const Text("Bildirim Gönder"),
-                                          onTap: () {
-                                            Navigator.pop(context);
-                                            sendEmergencyNotification(contact['uid'] ?? '');
-                                          },
-                                        ),
-                                        ListTile(
-                                          leading: const Icon(Icons.phone, color: Colors.green),
-                                          title: const Text("Telefonla Ara"),
-                                          onTap: () {
-                                            Navigator.pop(context);
-                                            callRelative(contact['phone'] ?? '');
-                                          },
-                                        ),
-                                      ],
-                                    );
-                                  }
-
+                            builder: (BuildContext context) {
+                              return Wrap(
+                                children: [
+                                  ListTile(
+                                    leading: const Icon(
+                                      Icons.notification_important,
+                                      color: Colors.red,
+                                    ),
+                                    title: const Text("Bildirim Gönder"),
+                                    onTap: () {
+                                      Navigator.pop(context);
+                                      sendEmergencyNotification(
+                                        contact['uid'] ?? '',
+                                      );
+                                    },
+                                  ),
+                                  ListTile(
+                                    leading: const Icon(
+                                      Icons.phone,
+                                      color: Colors.green,
+                                    ),
+                                    title: const Text("Telefonla Ara"),
+                                    onTap: () {
+                                      Navigator.pop(context);
+                                      callRelative(contact['phone'] ?? '');
+                                    },
+                                  ),
+                                ],
                               );
                             },
-                          ),
-                        ),
+                          );
+                        },
                       ),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -200,4 +203,5 @@ class _EmergencyState extends State<Emergency> {
         ],
       ),
     );
-  }                   }
+  }
+}

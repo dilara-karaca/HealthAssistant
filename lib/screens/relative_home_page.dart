@@ -32,21 +32,26 @@ class RelativeHomePageState extends State<RelativeHomePage> {
               .where('to', isEqualTo: uid)
               .orderBy('timestamp', descending: true)
               .get();
-      final docs = snapshot.docs;
 
-      final List<Map<String, dynamic>> loadedNotifications = docs
-          .map((doc) => {
-        ...doc.data(),
-        'id': doc.id, // ID'yi saklıyoruz ki güncelleme yapabilelim
-      })
-          .toList();
-      final unreadCount = loadedNotifications
-          .where((notif) => notif['isRead'] == false || notif['isRead'] == null)
-          .length;
+      final loadedNotifications =
+          snapshot.docs.map((doc) => {...doc.data(), 'id': doc.id}).toList();
+
+      final unreadCount =
+          loadedNotifications
+              .where(
+                (notif) => notif['isRead'] == false || notif['isRead'] == null,
+              )
+              .length;
 
       setState(() {
         notifications = snapshot.docs.map((doc) => doc.data()).toList();
-        notificationCount = notifications.length;
+        notificationCount = unreadCount;
+      });
+
+      FirebaseFirestore.instance.runTransaction((transaction) async {
+        for (var notif in snapshot.docs) {
+          transaction.update(notif.reference, {'isRead': true});
+        }
       });
     } catch (e) {
       print("Bildirimler alınamadı: $e");
@@ -153,9 +158,21 @@ class RelativeHomePageState extends State<RelativeHomePage> {
                             itemBuilder: (context, index) {
                               final notification = notifications[index];
                               final patient = patientName ?? "Hasta";
-                              return Text(
-                                "$patient size acil durum bildirimi gönderdi.",
-                                style: const TextStyle(fontSize: 16),
+                              return ListTile(
+                                leading: const Icon(
+                                  Icons.warning,
+                                  color: Colors.red,
+                                ),
+                                title: Text(
+                                  notification['message'] ??
+                                      'Acil durum bildirimi',
+                                ),
+                                subtitle: Text(
+                                  (notification['timestamp'] as Timestamp)
+                                      .toDate()
+                                      .toString(),
+                                  style: const TextStyle(fontSize: 12),
+                                ),
                               );
                             },
                           ),
@@ -175,13 +192,13 @@ class RelativeHomePageState extends State<RelativeHomePage> {
             : "${getPossessiveSuffix(patientName!.split(' ').first)}";
 
     final TextStyle dynamicTitleStyle = TextStyle(
-      fontSize: screenWidth * 0.045, // örnek: ~16-18px
+      fontSize: screenWidth * 0.045,
       fontWeight: FontWeight.w600,
       color: Colors.black,
     );
 
     final TextStyle dynamicValueStyle = TextStyle(
-      fontSize: screenWidth * 0.065, // örnek: ~24-28px
+      fontSize: screenWidth * 0.065,
       fontWeight: FontWeight.w900,
       color: Colors.black,
     );
@@ -210,7 +227,10 @@ class RelativeHomePageState extends State<RelativeHomePage> {
                   size: 30,
                   color: Colors.black,
                 ),
-                onPressed: _showNotificationsPanel,
+                onPressed: () async {
+                  await fetchNotifications();
+                  _showNotificationsPanel();
+                },
               ),
               if (notificationCount > 0)
                 Positioned(
