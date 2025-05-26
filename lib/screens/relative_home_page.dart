@@ -32,6 +32,17 @@ class RelativeHomePageState extends State<RelativeHomePage> {
               .where('to', isEqualTo: uid)
               .orderBy('timestamp', descending: true)
               .get();
+      final docs = snapshot.docs;
+
+      final List<Map<String, dynamic>> loadedNotifications = docs
+          .map((doc) => {
+        ...doc.data(),
+        'id': doc.id, // ID'yi saklıyoruz ki güncelleme yapabilelim
+      })
+          .toList();
+      final unreadCount = loadedNotifications
+          .where((notif) => notif['isRead'] == false || notif['isRead'] == null)
+          .length;
 
       setState(() {
         notifications = snapshot.docs.map((doc) => doc.data()).toList();

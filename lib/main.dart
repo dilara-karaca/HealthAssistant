@@ -8,7 +8,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'screens/login_email_screen.dart';
 import 'screens/login_phone_screen.dart';
 import 'screens/login_sms_screen.dart';
-import 'screens/maps.dart';
+import 'screens/map_screen.dart';
+import 'screens/location_service.dart';
 import 'screens/register_patient_screen.dart';
 import 'screens/register_relative_screen.dart';
 import 'screens/forgot_password_screen.dart';
@@ -160,7 +161,7 @@ class _RelativeNavigasyonState extends State<RelativeNavigasyon> {
           onPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => HaritaPage()),
+              MaterialPageRoute(builder: (context) => MapScreen()),
             );
           },
         ),
