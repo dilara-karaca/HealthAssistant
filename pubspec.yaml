@@ -23,6 +23,7 @@ dependencies:
   smooth_page_indicator: ^1.1.0
   multi_select_flutter: 4.1.3
   intl: ^0.20.2
+  pedometer: ^4.0.1
 
 
 dev_dependencies:

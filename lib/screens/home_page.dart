@@ -5,8 +5,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'chat_bot.dart';
 import 'dart:async';
 import 'package:kronik_hasta_takip/screens/bluetooth_manager.dart';
-import 'location_service.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:pedometer/pedometer.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -16,10 +16,11 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final LocationService _locationService = LocationService();
   final BluetoothManager _bluetoothManager = BluetoothManager();
   StreamSubscription<String>? dataSubscription;
   Timer? refreshTimer;
+
+  late Stream<StepCount> _stepCountStream;
 
   Map<String, String> sensorData = {
     'BPM': '-',
@@ -48,10 +49,10 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    fetchUserData();
-    _locationService.startPeriodicLocationUpdates();
+    requestBluetoothPermissions();
     listenToBluetoothData();
     setupPeriodicRefresh();
+    _startStepCount();
     BluetoothManager().dataStream.listen((data) {
       _handleBluetoothData(data);
     });
@@ -60,6 +61,12 @@ class _HomePageState extends State<HomePage> {
       setState(() {});
     });
     fetchUserData();
+  }
+
+  void requestBluetoothPermissions() async {
+    await Permission.bluetoothScan.request();
+    await Permission.bluetoothConnect.request();
+    await Permission.location.request();
   }
 
   Future<void> fetchUserData() async {
@@ -77,7 +84,6 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
-    _locationService.stopPeriodicLocationUpdates();
     dataSubscription?.cancel();
     refreshTimer?.cancel();
     bpmTimer?.cancel();
@@ -103,6 +109,24 @@ class _HomePageState extends State<HomePage> {
       currentTemp = (temp == null || temp <= 0) ? null : temp;
       currentBpm = (bpm == null || bpm <= 0) ? null : bpm;
     });
+  }
+
+  void _startStepCount() {
+    _stepCountStream = Pedometer.stepCountStream;
+    _stepCountStream.listen(
+      (StepCount event) {
+        setState(() {
+          sensorData['STEPS'] = event.steps.toString();
+        });
+      },
+      onError: (error) {
+        setState(() {
+          sensorData['STEPS'] = '-';
+        });
+      },
+      onDone: () => print("Adım sayacı tamamlandı"),
+      cancelOnError: true,
+    );
   }
 
   @override
@@ -239,9 +263,10 @@ class _HomePageState extends State<HomePage> {
                                   _buildBottomCard(
                                     "Adım Sayısı",
                                     "images/ayak.png",
-                                    "1200 Adım",
+                                    "${sensorData['STEPS']} Adım",
                                     screenWidth,
                                   ),
+
                                   _buildBottomCard(
                                     "Kan Oksijen Seviyesi",
                                     "images/kan.png",
@@ -549,7 +574,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      "126",
+                      "-",
                       style: TextStyle(
                         fontSize: screenWidth * 0.08,
                         fontWeight: FontWeight.w900,
@@ -575,7 +600,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      "96",
+                      "-",
                       style: TextStyle(
                         fontSize: screenWidth * 0.08,
                         fontWeight: FontWeight.w900,
@@ -635,7 +660,7 @@ class _HomePageState extends State<HomePage> {
                     const Text("Max   Min"),
                     const SizedBox(height: 8),
                     Text(
-                      "142   109",
+                      "-   -",
                       style: TextStyle(
                         fontSize: screenWidth * 0.065,
                         fontWeight: FontWeight.bold,
@@ -663,7 +688,7 @@ class _HomePageState extends State<HomePage> {
                     const Text("Max   Min"),
                     const SizedBox(height: 8),
                     Text(
-                      "98   68",
+                      "-   -",
                       style: TextStyle(
                         fontSize: screenWidth * 0.065,
                         fontWeight: FontWeight.bold,
