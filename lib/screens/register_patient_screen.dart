@@ -22,6 +22,7 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
   final TextEditingController weightController = TextEditingController();
   final TextEditingController heightController = TextEditingController();
 
+  DateTime? selectedBirthDate;
   String? selectedBloodType;
   String? selectedGender;
   List<String> selectedDiseases = [];
@@ -71,9 +72,9 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
               _buildUserTypeButtons(context),
               const SizedBox(height: 20),
               _buildTextFields(),
-              _buildDiseaseSelection(),
               _buildPhysicalInputs(),
               _buildDropdowns(),
+              _buildDiseaseSelection(),
               const SizedBox(height: 32),
               GestureDetector(
                 onTap: _registerPatient,
@@ -162,6 +163,44 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
           controller: confirmPasswordController,
           obscureText: true,
         ),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12.0),
+          child: GestureDetector(
+            onTap: () async {
+              final DateTime? picked = await showDatePicker(
+                context: context,
+                initialDate: DateTime(2000),
+                firstDate: DateTime(1900),
+                lastDate: DateTime.now(),
+              );
+              if (picked != null) {
+                setState(() {
+                  selectedBirthDate = picked;
+                });
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 16.0),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    selectedBirthDate == null
+                        ? 'Doğum Tarihi Seçiniz'
+                        : '${selectedBirthDate!.day}.${selectedBirthDate!.month}.${selectedBirthDate!.year}',
+                    style: TextStyle(fontSize: 16),
+                  ),
+                  const Icon(Icons.calendar_today, color: Colors.grey),
+                ],
+              ),
+            ),
+          ),
+        ),
+
       ],
     );
   }
@@ -189,35 +228,7 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
     );
   }
 
-  Widget _buildDiseaseSelection() {
-    return Column(
-      children: [
-        const Align(
-          alignment: Alignment.centerLeft,
-          child: Text(
-            'Hastalıklarınızı Seçiniz',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-        ),
-        const SizedBox(height: 8),
-        MultiSelectDialogField<String>(
-          items: diseaseList.map((e) => MultiSelectItem<String>(e, e)).toList(),
-          title: const Text("Hastalıklar"),
-          buttonText: const Text("Hastalık Seç"),
-          onConfirm: (values) {
-            setState(() {
-              selectedDiseases = List<String>.from(values);
-            });
-          },
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey.shade300),
-          ),
-        ),
-      ],
-    );
-  }
+
 
   Widget _buildPhysicalInputs() {
     return Row(
@@ -284,6 +295,29 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
       ],
     );
   }
+  Widget _buildDiseaseSelection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 12), // Diğer inputlarla hizalı boşluk
+        MultiSelectDialogField<String>(
+          items: diseaseList.map((e) => MultiSelectItem<String>(e, e)).toList(),
+          title: const Text("Hastalıklar"),
+          buttonText: const Text("Hastalık Seç"),
+          onConfirm: (values) {
+            setState(() {
+              selectedDiseases = List<String>.from(values);
+            });
+          },
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
+        ),
+      ],
+    );
+  }
 
   Future<void> _registerPatient() async {
     final name = nameController.text.trim();
@@ -323,12 +357,14 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
 
     if (selectedDiseases.isEmpty ||
         selectedBloodType == null ||
-        selectedGender == null) {
+        selectedGender == null ||
+        selectedBirthDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Lütfen tüm bilgileri eksiksiz giriniz.")),
       );
       return;
     }
+
 
     try {
       final userCredential = await FirebaseAuth.instance
@@ -372,6 +408,7 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
         'gender': selectedGender,
         'bloodType': selectedBloodType,
         'diseases': selectedDiseases,
+        'birthDate': selectedBirthDate?.toIso8601String(),
         'patientCode': patientCode.toUpperCase(), // ✅ büyük harfle kaydedildi
         'role': 'patient',
         'createdAt': Timestamp.now(),

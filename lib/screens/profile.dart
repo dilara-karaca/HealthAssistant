@@ -52,13 +52,24 @@ class _ProfilePageState extends State<ProfilePage> {
         emailController.text = data['email'] ?? '';
         phoneController.text = data['phone'] ?? '';
         genderController.text = data['gender'] ?? '';
-        birthDateController.text = data['birthDate'] ?? '';
         bloodGroupController.text = data['bloodType'] ?? '';
         heightController.text = data['height'] ?? '';
         weightController.text = data['weight'] ?? '';
         if (data['diseases'] != null && data['diseases'] is List) {
           selectedDiseases = Set<String>.from(data['diseases']);
           diseaseController.text = selectedDiseases.join('\n');
+          final rawBirthDate = data['birthDate'];
+          if (rawBirthDate != null && rawBirthDate is String && rawBirthDate.contains('T')) {
+            final parsedDate = DateTime.tryParse(rawBirthDate);
+            if (parsedDate != null) {
+              birthDateController.text = DateFormat('dd.MM.yyyy').format(parsedDate);
+            } else {
+              birthDateController.text = rawBirthDate;
+            }
+          } else {
+            birthDateController.text = rawBirthDate ?? '';
+          }
+
         }
       });
     }
