@@ -1,8 +1,11 @@
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:kronik_hasta_takip/screens/line_chart_sample.dart';
 import 'chat_bot.dart';
+import 'dart:async';
+import 'package:kronik_hasta_takip/screens/bluetooth_manager.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -12,8 +15,30 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  final BluetoothManager _bluetoothManager = BluetoothManager();
+  StreamSubscription<String>? dataSubscription;
+  Timer? refreshTimer;
+
+  Map<String, String> sensorData = {
+    'BPM': '-',
+    'TEMP': '-',
+    'SPO2': '-',
+    'STRESS': '-',
+    'BP': '-',
+    'STEPS': '-',
+  };
+  String lastRawData = "-";
+
   bool showPatientCode = false;
   Map<String, dynamic>? userData;
+
+  double? currentBpm;
+  List<double> bpmList = [];
+  Timer? bpmTimer;
+
+  double? currentTemp;
+  List<double> TempList = [];
+  Timer? TempTimer;
 
   double _botTop = 600;
   double _botLeft = 20;
@@ -21,6 +46,15 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    listenToBluetoothData();
+    setupPeriodicRefresh();
+    BluetoothManager().dataStream.listen((data) {
+      _handleBluetoothData(data);
+    });
+
+    bpmTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      setState(() {});
+    });
     fetchUserData();
   }
 
@@ -35,6 +69,35 @@ class _HomePageState extends State<HomePage> {
         userData = doc.data();
       });
     }
+  }
+
+  @override
+  void dispose() {
+    dataSubscription?.cancel();
+    refreshTimer?.cancel();
+    bpmTimer?.cancel();
+    super.dispose();
+  }
+
+  void _handleBluetoothData(String data) {
+    List<String> parts = data.split('|');
+    double? temp;
+    double? bpm;
+
+    for (var part in parts) {
+      if (part.startsWith("TEMP:")) {
+        String val = part.substring(5);
+        temp = double.tryParse(val);
+      } else if (part.startsWith("BPM:")) {
+        String val = part.substring(4);
+        bpm = double.tryParse(val);
+      }
+    }
+
+    setState(() {
+      currentTemp = (temp == null || temp <= 0) ? null : temp;
+      currentBpm = (bpm == null || bpm <= 0) ? null : bpm;
+    });
   }
 
   @override
@@ -188,8 +251,10 @@ class _HomePageState extends State<HomePage> {
                                   ),
                                   _buildBottomCard(
                                     "Vücut Isısı",
-                                    "images/sicaklik.png",
-                                    "37°C",
+                                    "images/temp.png",
+                                    currentTemp != null
+                                        ? "${currentTemp!.toStringAsFixed(1)}°C"
+                                        : "-",
                                     screenWidth,
                                   ),
                                 ],
@@ -259,7 +324,7 @@ class _HomePageState extends State<HomePage> {
             Row(
               children: [
                 Text(
-                  "67",
+                  currentBpm != null ? currentBpm!.toStringAsFixed(0) : "-",
                   style: TextStyle(
                     fontSize: screenWidth * 0.1,
                     fontWeight: FontWeight.bold,
@@ -270,10 +335,13 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
             const SizedBox(height: 16),
+            // 📊 Çubuk + iğne
             Stack(
               children: [
+                // Renkli çubuk her zaman görünür
                 Container(
                   height: 18,
+                  width: screenWidth - 64,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(5),
                     gradient: const LinearGradient(
@@ -287,61 +355,67 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                 ),
-                Positioned(
-                  left: 0.67 * screenWidth * 0.85,
-                  child: Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.black,
-                      border: Border.all(color: Colors.white, width: 1),
+                // İğne sadece veri varsa görünür
+                if (currentBpm != null)
+                  Positioned(
+                    left:
+                        ((currentBpm!.clamp(50, 150) - 50) / 100) *
+                        (screenWidth - 64),
+                    top: 3,
+                    child: Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.black,
+                        border: Border.all(color: Colors.white, width: 1),
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
             const SizedBox(height: 6),
-            Row(
-              children: [
-                Expanded(
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      "Yavaş",
-                      style: TextStyle(
-                        fontSize: screenWidth * 0.04,
-                        fontWeight: FontWeight.w700,
+            if (currentBpm != null)
+              Row(
+                children: [
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        "Yavaş",
+                        style: TextStyle(
+                          fontSize: screenWidth * 0.04,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                Expanded(
-                  child: Align(
-                    alignment: Alignment.center,
-                    child: Text(
-                      "Normal",
-                      style: TextStyle(
-                        fontSize: screenWidth * 0.04,
-                        fontWeight: FontWeight.w700,
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.center,
+                      child: Text(
+                        "Normal",
+                        style: TextStyle(
+                          fontSize: screenWidth * 0.04,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                Expanded(
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: Text(
-                      "Hızlı",
-                      style: TextStyle(
-                        fontSize: screenWidth * 0.04,
-                        fontWeight: FontWeight.w700,
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        "Hızlı",
+                        style: TextStyle(
+                          fontSize: screenWidth * 0.04,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
           ],
         ),
       ),
@@ -375,11 +449,48 @@ class _HomePageState extends State<HomePage> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 12),
-            SizedBox(
-              height: screenHeight * 0.18,
-              child: const LineChartSample(),
-            ),
+            const SizedBox(height: 65),
+            bpmList.isEmpty
+                ? Center(
+                  child: Text(
+                    "Grafik görüntülenemiyor.\nLütfen cihazınızı bağlayın.",
+                    style: TextStyle(
+                      fontSize: screenWidth * 0.055,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey,
+                    ),
+                  ),
+                )
+                : SizedBox(
+                  height: screenHeight * 0.18,
+                  child: LineChart(
+                    LineChartData(
+                      lineBarsData: [
+                        LineChartBarData(
+                          spots:
+                              bpmList
+                                  .asMap()
+                                  .entries
+                                  .map(
+                                    (e) => FlSpot(
+                                      e.key.toDouble() *
+                                          (60 /
+                                              bpmList.length), // Zaman aralığı
+                                      e.value,
+                                    ),
+                                  )
+                                  .toList(),
+                          isCurved: true,
+                          color: Colors.red,
+                          barWidth: 2,
+                          dotData: FlDotData(show: false),
+                        ),
+                      ],
+                      titlesData: FlTitlesData(show: false),
+                      borderData: FlBorderData(show: false),
+                    ),
+                  ),
+                ),
           ],
         ),
       ),
@@ -637,5 +748,44 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
     );
+  }
+
+  void listenToBluetoothData() {
+    dataSubscription = _bluetoothManager.dataStream.listen((data) {
+      lastRawData = data;
+    });
+  }
+
+  void setupPeriodicRefresh() {
+    refreshTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
+      Map<String, String> parsed = parseSensorData(lastRawData);
+      setState(() {
+        sensorData = parsed;
+        lastRawData = "-";
+      });
+    });
+  }
+
+  Map<String, String> parseSensorData(String rawData) {
+    Map<String, String> parsedData = {
+      'BPM': '-',
+      'TEMP': '-',
+      'SPO2': '-',
+      'STRESS': '-',
+      'BP': '-',
+      'STEPS': '-',
+    };
+
+    if (rawData == "-" || rawData.isEmpty) return parsedData;
+
+    List<String> parts = rawData.split("|");
+    for (var part in parts) {
+      var keyValue = part.split(":");
+      if (keyValue.length == 2) {
+        parsedData[keyValue[0].trim()] = keyValue[1].trim();
+      }
+    }
+
+    return parsedData;
   }
 }
