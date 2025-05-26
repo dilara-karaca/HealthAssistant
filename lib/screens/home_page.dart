@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'chat_bot.dart';
 import 'dart:async';
+import 'location_service.dart';
 import 'package:kronik_hasta_takip/screens/bluetooth_manager.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:pedometer/pedometer.dart';
@@ -16,6 +17,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  final LocationService _locationService = LocationService();
   final BluetoothManager _bluetoothManager = BluetoothManager();
   StreamSubscription<String>? dataSubscription;
   Timer? refreshTimer;
@@ -49,6 +51,8 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    fetchUserData();
+    _locationService.startPeriodicLocationUpdates();
     requestBluetoothPermissions();
     listenToBluetoothData();
     setupPeriodicRefresh();
@@ -84,6 +88,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
+    _locationService.stopPeriodicLocationUpdates();
     dataSubscription?.cancel();
     refreshTimer?.cancel();
     bpmTimer?.cancel();

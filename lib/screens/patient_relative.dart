@@ -12,63 +12,8 @@ class PatientRelativePage extends StatefulWidget {
 class _PatientRelativePageState extends State<PatientRelativePage> {
   final String currentUserId = FirebaseAuth.instance.currentUser!.uid;
 
-  Future<void> _addRelative(BuildContext context) async {
-    String newName = '';
-    String newPhone = '';
-
-    await showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Yeni Hasta Yakını Ekle'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                decoration: const InputDecoration(labelText: 'İsim'),
-                onChanged: (value) => newName = value,
-              ),
-              TextField(
-                decoration: const InputDecoration(
-                  labelText: 'Telefon Numarası',
-                ),
-                keyboardType: TextInputType.phone,
-                onChanged: (value) => newPhone = value,
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              child: const Text('İptal'),
-              onPressed: () => Navigator.pop(context),
-            ),
-            ElevatedButton(
-              child: const Text('Ekle'),
-              onPressed: () async {
-                if (newName.trim().isNotEmpty && newPhone.trim().isNotEmpty) {
-                  await FirebaseFirestore.instance
-                      .collection('patients')
-                      .doc(currentUserId)
-                      .collection('relatives')
-                      .add({
-                        'name': newName,
-                        'phone': newPhone,
-                        'createdAt': Timestamp.now(),
-                      });
-                }
-                Navigator.pop(context);
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   Future<void> _deleteRelative(String docId) async {
     await FirebaseFirestore.instance
-        .collection('patients')
-        .doc(currentUserId)
         .collection('relatives')
         .doc(docId)
         .delete();
@@ -87,12 +32,6 @@ class _PatientRelativePageState extends State<PatientRelativePage> {
         ),
         centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.black),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add, color: Colors.black),
-            onPressed: () => _addRelative(context),
-          ),
-        ],
       ),
       body: Stack(
         children: [
@@ -100,13 +39,11 @@ class _PatientRelativePageState extends State<PatientRelativePage> {
             child: Image.asset('images/arka_plan.png', fit: BoxFit.cover),
           ),
           StreamBuilder<QuerySnapshot>(
-            stream:
-                FirebaseFirestore.instance
-                    .collection('patients')
-                    .doc(currentUserId)
-                    .collection('relatives')
-                    .orderBy('createdAt', descending: true)
-                    .snapshots(),
+            stream: FirebaseFirestore.instance
+                .collection('relatives')
+                .where('linkedPatient', isEqualTo: currentUserId)
+                .orderBy('createdAt', descending: true)
+                .snapshots(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
@@ -151,3 +88,4 @@ class _PatientRelativePageState extends State<PatientRelativePage> {
     );
   }
 }
+

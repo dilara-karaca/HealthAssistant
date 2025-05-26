@@ -11,12 +11,15 @@
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION"/>
 
+<<<<<<< HEAD
     
+=======
+>>>>>>> 76ccc87d0c0aca991f7a6b88e2b8a7331e14f5bc
     <application
         android:label="kronik_hasta_takip"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
-        
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -30,18 +33,19 @@
             <!-- Flutter geçici başlangıç teması -->
             <meta-data
                 android:name="io.flutter.embedding.android.NormalTheme"
-                android:resource="@style/NormalTheme"
-            />
-            
+                android:resource="@style/NormalTheme" />
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
-        <!--  Google Maps API Anahtarı  -->
+
+        <!-- Google Maps API Anahtarı -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyCGZzga-OqX0omQ_FNEPYbTBevR7HWy44E"/>
+
         <!-- Flutter için gerekli meta-data -->
         <meta-data
             android:name="flutterEmbedding"
