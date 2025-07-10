@@ -24,6 +24,7 @@ import 'screens/relative_help.dart';
 import 'screens/home_page.dart';
 import 'screens/settings.dart' as general_settings;
 import 'screens/chat_bot.dart';
+import 'screens/email_verification_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

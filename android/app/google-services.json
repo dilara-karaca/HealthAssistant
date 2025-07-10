@@ -1,6 +1,7 @@
 {
   "project_info": {
     "project_number": "970623891525",
+    "firebase_url": "https://healthassistant-2e690-default-rtdb.firebaseio.com",
     "project_id": "healthassistant-2e690",
     "storage_bucket": "healthassistant-2e690.firebasestorage.app"
   },
@@ -12,7 +13,28 @@
           "package_name": "com.example.kronik_hasta_takip"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "970623891525-76jmlqsnpp7arhk80ki8o12snb7l4j2s.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.kronik_hasta_takip",
+            "certificate_hash": "70708abc7797f94cfa061b518fc38dcf2aead725"
+          }
+        },
+        {
+          "client_id": "970623891525-ctcht2vc14vgb3niu59q3la9rtd74vii.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.kronik_hasta_takip",
+            "certificate_hash": "16b15f032f6d76fe0e1f47ae7cfdb3742d58dec6"
+          }
+        },
+        {
+          "client_id": "970623891525-gr6d3f61gmou09buqfkg9q4kbovapdh1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBD-j1O1ku8HXoQ8r9YKAaZH_6Pg51MuLo"
@@ -20,7 +42,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "970623891525-gr6d3f61gmou09buqfkg9q4kbovapdh1.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "970623891525-hsbug22kp69ima8agtmq8mpr0kpbotnh.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.kronikHastaTakip"
+              }
+            }
+          ]
         }
       }
     }

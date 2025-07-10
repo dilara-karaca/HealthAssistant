@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:multi_select_flutter/multi_select_flutter.dart';
+import 'package:kronik_hasta_takip/screens/email_verification_screen.dart';
 
 class RegisterPatientScreen extends StatefulWidget {
   const RegisterPatientScreen({super.key});
@@ -36,6 +37,16 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
     "Kalp",
     "Astım",
   ];
+
+  bool _isValidEmail(String email) {
+    return RegExp(
+          r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+        ).hasMatch(email) &&
+        !email.contains(' ') && // Boşluk kontrolü
+        email
+            .split('@')[1]
+            .contains('.'); // @ sonrası nokta kontrolü (gmail.com gibi)
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -152,7 +163,6 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
             ),
           ),
         ),
-
         buildInputField(
           label: 'Şifre',
           controller: passwordController,
@@ -180,7 +190,10 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
               }
             },
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 16.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 12.0,
+                vertical: 16.0,
+              ),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
@@ -192,7 +205,7 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
                     selectedBirthDate == null
                         ? 'Doğum Tarihi Seçiniz'
                         : '${selectedBirthDate!.day}.${selectedBirthDate!.month}.${selectedBirthDate!.year}',
-                    style: TextStyle(fontSize: 16),
+                    style: const TextStyle(fontSize: 16),
                   ),
                   const Icon(Icons.calendar_today, color: Colors.grey),
                 ],
@@ -200,7 +213,6 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
             ),
           ),
         ),
-
       ],
     );
   }
@@ -227,8 +239,6 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
       ),
     );
   }
-
-
 
   Widget _buildPhysicalInputs() {
     return Row(
@@ -295,11 +305,12 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
       ],
     );
   }
+
   Widget _buildDiseaseSelection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 12), // Diğer inputlarla hizalı boşluk
+        const SizedBox(height: 12),
         MultiSelectDialogField<String>(
           items: diseaseList.map((e) => MultiSelectItem<String>(e, e)).toList(),
           title: const Text("Hastalıklar"),
@@ -329,6 +340,7 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
     final weight = weightController.text.trim();
     final height = heightController.text.trim();
 
+    // Validation checks
     if (name.isEmpty ||
         surname.isEmpty ||
         email.isEmpty ||
@@ -337,6 +349,13 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
         height.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Lütfen tüm alanları doldurunuz.")),
+      );
+      return;
+    }
+
+    if (!_isValidEmail(email)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Geçerli bir email adresi girin!")),
       );
       return;
     }
@@ -365,20 +384,19 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
       return;
     }
 
-
     try {
+      // 1. Firebase Auth'da kullanıcı oluştur
       final userCredential = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(email: email, password: password);
-      final uid = userCredential.user!.uid;
 
+      // 2. Doğrulama maili gönder
+      await userCredential.user?.sendEmailVerification();
+
+      // 3. Benzersiz hasta kodu üret
       String generatePatientCode() {
         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
         final rand = Random();
-        return 'HT' +
-            List.generate(
-              4,
-              (index) => chars[rand.nextInt(chars.length)],
-            ).join();
+        return 'HT${List.generate(4, (index) => chars[rand.nextInt(chars.length)]).join()}';
       }
 
       String patientCode;
@@ -389,43 +407,77 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
         final existing =
             await FirebaseFirestore.instance
                 .collection('patients')
-                .where(
-                  'patientCode',
-                  isEqualTo: patientCode.toUpperCase(),
-                ) // 🔄 kontrol de büyük harf
+                .where('patientCode', isEqualTo: patientCode.toUpperCase())
                 .get();
         codeExists = existing.docs.isNotEmpty;
       } while (codeExists);
 
-      await FirebaseFirestore.instance.collection('patients').doc(uid).set({
-        'uid': uid,
-        'name': name,
-        'surname': surname,
-        'email': email,
-        'phone': '+90$phone',
-        'weight': weight,
-        'height': height,
-        'gender': selectedGender,
-        'bloodType': selectedBloodType,
-        'diseases': selectedDiseases,
-        'birthDate': selectedBirthDate?.toIso8601String(),
-        'patientCode': patientCode.toUpperCase(), // ✅ büyük harfle kaydedildi
-        'role': 'patient',
-        'createdAt': Timestamp.now(),
-      });
+      // 4. Firestore'a hasta verilerini kaydet
+      await FirebaseFirestore.instance
+          .collection('patients')
+          .doc(userCredential.user!.uid)
+          .set({
+            'uid': userCredential.user!.uid,
+            'name': name,
+            'surname': surname,
+            'email': email,
+            'phone': '+90$phone',
+            'weight': weight,
+            'height': height,
+            'gender': selectedGender,
+            'bloodType': selectedBloodType,
+            'diseases': selectedDiseases,
+            'birthDate': selectedBirthDate?.toIso8601String(),
+            'patientCode': patientCode.toUpperCase(),
+            'role': 'patient',
+            'emailVerified': false, // Doğrulama durumu
+            'createdAt': Timestamp.now(),
+          });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Kayıt başarılı! Giriş ekranına yönlendiriliyorsunuz."),
+      // 5. Doğrulama sayfasına yönlendir
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder:
+              (context) => EmailVerificationScreen(
+                email: email,
+                nameController: nameController,
+                surnameController: surnameController,
+                phoneController: phoneController,
+                weightController: weightController,
+                heightController: heightController,
+                selectedBirthDate: selectedBirthDate,
+                selectedBloodType: selectedBloodType,
+                selectedGender: selectedGender,
+                selectedDiseases: selectedDiseases,
+              ),
         ),
       );
-
-      await Future.delayed(const Duration(milliseconds: 500));
-      Navigator.pushReplacementNamed(context, '/loginEmail');
+    } on FirebaseAuthException catch (e) {
+      String errorMessage = "Kayıt hatası: ";
+      switch (e.code) {
+        case 'email-already-in-use':
+          errorMessage += "Bu email zaten kullanımda";
+          break;
+        case 'invalid-email':
+          errorMessage += "Geçersiz email adresi";
+          break;
+        case 'operation-not-allowed':
+          errorMessage += "Email/şifre ile giriş kapalı";
+          break;
+        case 'weak-password':
+          errorMessage += "Şifre en az 6 karakter olmalı";
+          break;
+        default:
+          errorMessage += e.message ?? "Bilinmeyen hata";
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(errorMessage)));
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Kayıt sırasında hata oluştu: ${e.toString()}")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Sistem hatası: ${e.toString()}")));
     }
   }
 }

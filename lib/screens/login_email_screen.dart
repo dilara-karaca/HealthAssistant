@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class LoginEmailScreen extends StatefulWidget {
   const LoginEmailScreen({super.key});
@@ -12,6 +13,7 @@ class LoginEmailScreen extends StatefulWidget {
 class _LoginEmailScreenState extends State<LoginEmailScreen> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
   bool obscurePassword = true;
 
   Future<void> loginWithEmail() async {
@@ -26,38 +28,7 @@ class _LoginEmailScreenState extends State<LoginEmailScreen> {
     }
 
     try {
-      final userCredential = await FirebaseAuth.instance
-          .signInWithEmailAndPassword(email: email, password: password);
-      final uid = userCredential.user!.uid;
-
-      // Önce "patients" koleksiyonunu kontrol et
-      final patientDoc =
-          await FirebaseFirestore.instance
-              .collection('patients')
-              .doc(uid)
-              .get();
-
-      if (patientDoc.exists) {
-        Navigator.pushReplacementNamed(context, '/patientHome');
-        return;
-      }
-
-      // Sonra "relatives" koleksiyonunu kontrol et
-      final relativeDoc =
-          await FirebaseFirestore.instance
-              .collection('relatives')
-              .doc(uid)
-              .get();
-
-      if (relativeDoc.exists) {
-        Navigator.pushReplacementNamed(context, '/relativeHome');
-        return;
-      }
-
-      // Hiçbiri değilse
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Kullanıcı rolü belirlenemedi.")),
-      );
+      await _handleLogin(email, password);
     } on FirebaseAuthException catch (e) {
       ScaffoldMessenger.of(
         context,
@@ -69,71 +40,204 @@ class _LoginEmailScreenState extends State<LoginEmailScreen> {
     }
   }
 
+  Future<void> _handleLogin(String email, String password) async {
+    final userCredential = await FirebaseAuth.instance
+        .signInWithEmailAndPassword(email: email, password: password);
+    await _checkUserRole(userCredential.user!.uid);
+  }
+
+  Future<void> _checkUserRole(String uid) async {
+    final patientDoc =
+        await FirebaseFirestore.instance.collection('patients').doc(uid).get();
+
+    if (patientDoc.exists) {
+      Navigator.pushReplacementNamed(context, '/patientHome');
+      return;
+    }
+
+    final relativeDoc =
+        await FirebaseFirestore.instance.collection('relatives').doc(uid).get();
+
+    if (relativeDoc.exists) {
+      Navigator.pushReplacementNamed(context, '/relativeHome');
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Kullanıcı rolü belirlenemedi.")),
+    );
+  }
+
+  Future<void> signInWithGoogle() async {
+    try {
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) return;
+
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      final UserCredential userCredential = await FirebaseAuth.instance
+          .signInWithCredential(credential);
+
+      if (userCredential.user != null) {
+        final userExists = await _checkIfUserExists(userCredential.user!.uid);
+
+        if (!userExists) {
+          await FirebaseFirestore.instance
+              .collection('patients')
+              .doc(userCredential.user!.uid)
+              .set({
+                'email': userCredential.user!.email,
+                'name': userCredential.user!.displayName,
+                'photoUrl': userCredential.user!.photoURL,
+                'createdAt': FieldValue.serverTimestamp(),
+              });
+        }
+
+        Navigator.pushReplacementNamed(context, '/patientHome');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Google ile giriş hatası: $e")));
+    }
+  }
+
+  Future<bool> _checkIfUserExists(String uid) async {
+    final patientDoc =
+        await FirebaseFirestore.instance.collection('patients').doc(uid).get();
+
+    if (patientDoc.exists) return true;
+
+    final relativeDoc =
+        await FirebaseFirestore.instance.collection('relatives').doc(uid).get();
+
+    return relativeDoc.exists;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: Image.asset(
-              'images/ana_sayfa_arkaplan.png',
-              fit: BoxFit.cover,
-            ),
-          ),
-          SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 24.0,
-                vertical: 20,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const SizedBox(height: 20),
-                  const Text(
-                    'Sens-AI',
-                    style: TextStyle(
-                      fontSize: 40,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.black,
-                    ),
+      resizeToAvoidBottomInset: false,
+      body: LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints constraints) {
+          final screenHeight = constraints.maxHeight;
+          final screenWidth = constraints.maxWidth;
+
+          return Stack(
+            children: [
+              Positioned.fill(
+                child: Transform.scale(
+                  scale: 1.05,
+                  child: Image.asset(
+                    'images/ana_sayfa_arkaplan.png',
+                    fit: BoxFit.cover,
+                    width: screenWidth,
+                    height: screenHeight,
+                    alignment: Alignment.center,
                   ),
-                  const SizedBox(height: 280),
-                  Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      image: const DecorationImage(
-                        image: AssetImage('images/koyu_rectangle.png'),
-                        fit: BoxFit.fitWidth,
-                      ),
-                      borderRadius: BorderRadius.circular(32),
-                    ),
-                    child: Column(
-                      children: [
-                        _buildSwitchTabs(context),
-                        const SizedBox(height: 28),
-                        _buildEmailField(),
-                        const SizedBox(height: 20),
-                        _buildPasswordField(),
-                        const SizedBox(height: 28),
-                        _buildLoginButton(),
-                        const SizedBox(height: 20),
-                        _buildForgotPassword(context),
-                        const SizedBox(height: 16),
-                        GestureDetector(
-                          onTap: () {
-                            Navigator.pushNamed(context, '/registerPatient');
-                          },
-                          child: Image.asset('images/frame_60.png'),
+                ),
+              ),
+              SafeArea(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.only(
+                    top: 130,
+                    bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+                    left: 24,
+                    right: 24,
+                  ),
+                  child: Column(
+                    children: [
+                      SizedBox(height: screenHeight * 0.2),
+                      Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.6),
+                          borderRadius: BorderRadius.circular(32),
                         ),
-                      ],
-                    ),
+                        child: Column(
+                          children: [
+                            _buildSwitchTabs(context),
+                            const SizedBox(height: 20),
+                            _buildEmailField(),
+                            const SizedBox(height: 15),
+                            _buildPasswordField(),
+                            const SizedBox(height: 15),
+                            _buildLoginButton(),
+                            const SizedBox(height: 8),
+                            _buildForgotPassword(context),
+                            const SizedBox(height: 15),
+                            _buildGoogleSignInButton(),
+                            const SizedBox(height: 10),
+                            _buildRegisterButton(),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildGoogleSignInButton() {
+    return OutlinedButton(
+      style: OutlinedButton.styleFrom(
+        backgroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        side: const BorderSide(color: Colors.grey),
+      ),
+      onPressed: signInWithGoogle,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Image.asset('images/google_icon.jpeg', height: 24, width: 24),
+          const SizedBox(width: 10),
+          const Text(
+            'Google ile Giriş Yap',
+            style: TextStyle(
+              color: Colors.black87,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildRegisterButton() {
+    return GestureDetector(
+      onTap: () {
+        Navigator.pushNamed(context, '/registerPatient');
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white, width: 2),
+        ),
+        child: const Center(
+          child: Text(
+            'Hesabınız yok mu? Kayıt Olun',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -271,16 +375,19 @@ class _LoginEmailScreenState extends State<LoginEmailScreen> {
   }
 
   Widget _buildForgotPassword(BuildContext context) {
-    return TextButton(
-      onPressed: () {
-        Navigator.pushNamed(context, '/forgotPassword');
-      },
-      child: const Text(
-        'Şifremi Unuttum',
-        style: TextStyle(
-          color: Colors.grey,
-          decoration: TextDecoration.underline,
-          fontSize: 16,
+    return Align(
+      alignment: Alignment.centerRight,
+      child: TextButton(
+        onPressed: () {
+          Navigator.pushNamed(context, '/forgotPassword');
+        },
+        child: const Text(
+          'Şifremi Unuttum',
+          style: TextStyle(
+            color: Colors.grey,
+            decoration: TextDecoration.underline,
+            fontSize: 14,
+          ),
         ),
       ),
     );
