@@ -60,45 +60,52 @@ class _LoginPhoneScreenState extends State<LoginPhoneScreen> {
     }
   }
 
- import 'package:flutter/material.dart';
-
-class LoginPhoneScreen extends StatelessWidget {
-  const LoginPhoneScreen({super.key});
-
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final screenWidth = MediaQuery.of(context).size.width;
-
     return Scaffold(
-      body: SizedBox(
-        height: screenHeight,
-        width: screenWidth,
+      resizeToAvoidBottomInset: false,
+      body: Container(
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage("images/ana_sayfa_arkaplan.png"),
+            fit: BoxFit.cover,
+            alignment: Alignment.topCenter,
+          ),
+        ),
         child: Stack(
           children: [
-            /// ✅ Arka plan resmi ekranı kaplar
-            Positioned.fill(
-              child: Image.asset(
-                'images/ana_sayfa_arkaplan.png',
-                fit: BoxFit.cover,
-              ),
-            ),
-
-            /// ✅ Ön plan içerik
-            Center(
-              child: Container(
-                padding: const EdgeInsets.all(24),
-                margin: const EdgeInsets.symmetric(horizontal: 32),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(24),
+            SafeArea(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.only(
+                  top: 130,
+                  bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+                  left: 24,
+                  right: 24,
                 ),
-                child: const Column(
-                  mainAxisSize: MainAxisSize.min,
+                child: Column(
                   children: [
-                    Text(
-                      "Bu test ekranıdır",
-                      style: TextStyle(color: Colors.white, fontSize: 24),
+                    SizedBox(height: MediaQuery.of(context).size.height * 0.2),
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.6),
+                        borderRadius: BorderRadius.circular(32),
+                      ),
+                      child: Column(
+                        children: [
+                          _buildAuthMethodTabs(),
+                          const SizedBox(height: 20),
+                          _buildPhoneField(),
+                          const SizedBox(height: 15),
+                          _buildPasswordField(),
+                          const SizedBox(height: 20),
+                          _buildLoginButton(),
+                          const SizedBox(height: 10),
+                          _buildForgotPasswordButton(),
+                          const SizedBox(height: 15),
+                          _buildRegisterButton(),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -109,8 +116,6 @@ class LoginPhoneScreen extends StatelessWidget {
       ),
     );
   }
-}
-
 
   Widget _buildAuthMethodTabs() {
     return Container(
