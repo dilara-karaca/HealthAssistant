@@ -44,7 +44,7 @@
         <!-- Google Maps API Anahtarı -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyCGZzga-OqX0omQ_FNEPYbTBevR7HWy44E"/>
+            android:value="${MAPS_API_KEY}"/>
 
         <!-- Flutter için gerekli meta-data -->
         <meta-data

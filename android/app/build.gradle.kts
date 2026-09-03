@@ -1,10 +1,19 @@
 // android/app/build.gradle.kts
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
     id("com.google.gms.google-services") // Firebase için gerekli
     id("dev.flutter.flutter-gradle-plugin")
 }
+
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.inputStream().use { localProperties.load(it) }
+}
+val mapsApiKey = localProperties.getProperty("MAPS_API_KEY") ?: ""
 
 android {
     namespace = "com.example.kronik_hasta_takip"
@@ -17,6 +26,7 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
+        manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     }
 
     compileOptions {
